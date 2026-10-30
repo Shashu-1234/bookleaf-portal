@@ -1,17 +1,18 @@
 import "server-only";
 
+import { cache } from "react";
 import { z } from "zod";
 import { connection } from "next/server";
 
 import { ticketCategorySchema, ticketPrioritySchema } from "@/lib/ai/schemas";
 
-import { requireClaims } from "./auth";
+import { requireClaims, requireRole } from "./auth";
 import { DatabaseOperationError } from "./errors";
 import type { AdminTicket } from "@/features/admin/types";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
-export async function getAdminPortalData() {
+export const getAdminPortalData = cache(async () => {
   await connection();
   const rows = await listAdminTickets();
   const now = Date.now();
@@ -75,7 +76,22 @@ export async function getAdminPortalData() {
   });
 
   return { tickets };
-}
+});
+
+export const getCurrentStaffProfile = cache(async () => {
+  const { supabase, claims } = await requireRole(["admin", "ops"]);
+  const { data, error } = await supabase
+    .from("staff_profiles")
+    .select("display_name")
+    .eq("user_id", claims.sub)
+    .maybeSingle();
+
+  if (error) {
+    throw new DatabaseOperationError("Unable to load the support profile.", "STAFF_PROFILE_QUERY_FAILED", { cause: error });
+  }
+
+  return data;
+});
 
 export async function getAdminTicketByCode(code: string) {
   const { tickets } = await getAdminPortalData();

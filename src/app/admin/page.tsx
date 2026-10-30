@@ -1,9 +1,7 @@
 import { OverviewDashboard } from "@/features/admin/components/overview-dashboard";
-import { getAdminPortalData } from "@/lib/database/admin-repository";
-import { requireRole } from "@/lib/database/auth";
+import { getAdminPortalData, getCurrentStaffProfile } from "@/lib/database/admin-repository";
 
 export default async function AdminOverviewPage() {
-  const [{ tickets }, { supabase, claims }] = await Promise.all([getAdminPortalData(), requireRole(["admin", "ops"])]);
-  const { data: staff } = await supabase.from("staff_profiles").select("display_name").eq("user_id", claims.sub).single();
+  const [{ tickets }, staff] = await Promise.all([getAdminPortalData(), getCurrentStaffProfile()]);
   return <OverviewDashboard tickets={tickets} adminName={staff?.display_name ?? "Support"} />;
 }

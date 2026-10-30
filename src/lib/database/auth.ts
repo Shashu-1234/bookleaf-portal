@@ -2,14 +2,17 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
+import { cache } from "react";
 import { AuthenticationRequiredError, DatabaseOperationError } from "./errors";
 import { createClient } from "../supabase/server";
 
 export type PortalRole = "admin" | "ops" | "author";
 
-export async function requireClaims() {
+export const requireClaims = cache(async () => {
   // Supabase Auth reads the current time while validating session expiry. Mark
   // this boundary dynamic before creating the client under Cache Components.
+  // React cache deduplicates this work only within the current server render;
+  // it never shares a Supabase client or identity between requests or users.
   await connection();
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
@@ -20,7 +23,7 @@ export async function requireClaims() {
   if (!data?.claims?.sub) throw new AuthenticationRequiredError();
 
   return { supabase, claims: data.claims };
-}
+});
 
 export async function requireRole(allowed: readonly PortalRole[]) {
   const { supabase, claims } = await requireClaims();

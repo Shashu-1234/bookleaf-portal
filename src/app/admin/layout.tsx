@@ -2,14 +2,13 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { AdminShell } from "@/features/admin/components/admin-shell";
-import { requireRole } from "@/lib/database/auth";
+import { getCurrentStaffProfile } from "@/lib/database/admin-repository";
 
 export const metadata: Metadata = { title: "Admin" };
 export const instant = false;
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { supabase, claims } = await requireRole(["admin", "ops"]);
-  const { data: staff } = await supabase.from("staff_profiles").select("display_name").eq("user_id", claims.sub).single();
+  const staff = await getCurrentStaffProfile();
   const name = staff?.display_name ?? "BookLeaf Support";
   const admin = { name, role: "Support Operations", initials: name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase() };
   return (

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { z } from "zod";
 
 import { ticketCategorySchema } from "@/lib/ai/schemas";
@@ -39,7 +40,7 @@ function formatDateTime(value: string) {
   return dateTimeFormatter.format(new Date(value));
 }
 
-export async function getAuthorPortalData() {
+export const getAuthorPortalData = cache(async () => {
   const workspace = await getCurrentAuthorWorkspace();
   if (!workspace) throw new DatabaseOperationError("The signed-in user is not linked to an author account.", "AUTHOR_LINK_NOT_FOUND");
 
@@ -103,7 +104,7 @@ export async function getAuthorPortalData() {
     tickets,
     payouts,
   };
-}
+});
 
 export async function createAuthorTicket(input: unknown) {
   const value = createTicketInputSchema.parse(input);
