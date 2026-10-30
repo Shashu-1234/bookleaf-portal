@@ -1,0 +1,28 @@
+import { BadgeIndianRupee, CheckCircle2, CircleDollarSign, Download, Info, WalletCards } from "lucide-react";
+
+import { currency } from "../formatters";
+import type { AuthorBook, RoyaltyPayout } from "../types";
+
+export function RoyaltiesOverview({ books, payouts }: { books: AuthorBook[]; payouts: RoyaltyPayout[] }) {
+  const totals = books.reduce((summary, book) => ({ earned: summary.earned + book.totalRoyaltyEarned, paid: summary.paid + book.royaltyPaid, pending: summary.pending + book.royaltyPending }), { earned: 0, paid: 0, pending: 0 });
+  return (
+    <div className="space-y-6">
+      <div><p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-[#176786]">Earnings centre</p><h1 className="text-2xl font-bold tracking-[-0.03em] text-[#172b36] sm:text-3xl">Royalties</h1><p className="mt-2 text-sm leading-6 text-[#687f89]">A transparent breakdown of earnings, completed payouts and pending balances.</p></div>
+      <section className="grid gap-4 md:grid-cols-3">
+        {[
+          { label: "Total royalty earned", value: totals.earned, icon: CircleDollarSign, tone: "bg-[#e9f5f7] text-[#176786]" },
+          { label: "Royalty paid", value: totals.paid, icon: WalletCards, tone: "bg-emerald-50 text-emerald-700" },
+          { label: "Pending balance", value: totals.pending, icon: BadgeIndianRupee, tone: "bg-amber-50 text-amber-700" },
+        ].map((metric) => { const Icon = metric.icon; return <article key={metric.label} className="rounded-2xl border border-[#dfe7ea] bg-white p-5 shadow-[0_8px_30px_rgba(24,57,70,0.04)]"><div className="flex items-start justify-between"><div><p className="text-sm text-[#687f89]">{metric.label}</p><p className="mt-2 text-2xl font-bold text-[#172b36]">{currency.format(metric.value)}</p></div><span className={`grid size-10 place-items-center rounded-xl ${metric.tone}`}><Icon className="size-5" /></span></div></article>; })}
+      </section>
+      <div className="flex items-start gap-3 rounded-xl border border-[#cfe7ed] bg-[#edf8fa] p-4 text-sm leading-6 text-[#28596c]"><Info className="mt-0.5 size-4 shrink-0" /><p>Royalties are calculated quarterly. Eligible payouts are normally processed within 45 days after the quarter ends.</p></div>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="overflow-hidden rounded-2xl border border-[#dfe7ea] bg-white">
+          <div className="border-b border-[#e7edef] px-5 py-4 sm:px-6"><h2 className="font-bold text-[#172b36]">Earnings by book</h2><p className="mt-1 text-xs text-[#78909b]">Lifetime figures from the supplied BookLeaf dataset</p></div>
+          <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-sm"><thead className="bg-[#f8fafb] text-xs uppercase tracking-wider text-[#78909b]"><tr><th className="px-6 py-3 font-semibold">Book</th><th className="px-4 py-3 font-semibold">Earned</th><th className="px-4 py-3 font-semibold">Paid</th><th className="px-4 py-3 font-semibold">Pending</th><th className="px-6 py-3 font-semibold">Last payout</th></tr></thead><tbody className="divide-y divide-[#edf1f2]">{books.map((book) => <tr key={book.id}><td className="px-6 py-4"><p className="font-semibold text-[#29434f]">{book.title}</p><p className="mt-1 text-xs text-[#8a9da5]">{book.id}</p></td><td className="px-4 py-4 font-medium">{currency.format(book.totalRoyaltyEarned)}</td><td className="px-4 py-4 text-emerald-700">{currency.format(book.royaltyPaid)}</td><td className="px-4 py-4 font-semibold text-amber-700">{currency.format(book.royaltyPending)}</td><td className="px-6 py-4 text-[#687f89]">{book.lastPayoutDate}</td></tr>)}</tbody></table></div>
+        </section>
+        <section className="rounded-2xl border border-[#dfe7ea] bg-white p-5"><div className="flex items-center justify-between"><div><h2 className="font-bold text-[#172b36]">Payout history</h2><p className="mt-1 text-xs text-[#78909b]">Recent completed transfers</p></div><button type="button" disabled aria-label="Download payout history" title="Export planned" className="grid size-9 cursor-not-allowed place-items-center rounded-lg border border-[#dfe7ea] text-[#8a9da5] disabled:opacity-70"><Download className="size-4" /></button></div><div className="mt-5 space-y-5">{payouts.map((payout, index) => <div key={payout.id} className="relative flex gap-3"><div className="flex flex-col items-center"><span className="grid size-8 place-items-center rounded-full bg-emerald-50 text-emerald-700"><CheckCircle2 className="size-4" /></span>{index < payouts.length - 1 ? <span className="mt-1 h-full w-px bg-[#e2e9eb]" /> : null}</div><div className="min-w-0 pb-1"><div className="flex items-start justify-between gap-3"><p className="text-sm font-semibold text-[#29434f]">{payout.period}</p><p className="text-sm font-bold text-[#172b36]">{currency.format(payout.amount)}</p></div><p className="mt-1 text-xs text-[#78909b]">{payout.status} · {payout.date}</p><p className="mt-1 truncate font-mono text-[10px] text-[#9aabb2]">{payout.reference}</p></div></div>)}</div></section>
+      </div>
+    </div>
+  );
+}
