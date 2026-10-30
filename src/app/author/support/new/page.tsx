@@ -12,7 +12,6 @@ export default async function NewAuthorQueryPage() {
     "use server";
     const ticket = await createAuthorTicket({
       bookId: formData.get("bookId") === "account" ? null : String(formData.get("bookId") ?? ""),
-      category: String(formData.get("category") ?? ""),
       subject: String(formData.get("subject") ?? ""),
       description: String(formData.get("description") ?? ""),
     });

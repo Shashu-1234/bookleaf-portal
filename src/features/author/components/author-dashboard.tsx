@@ -23,12 +23,14 @@ export function AuthorDashboard({ author, books, tickets }: { author: { firstNam
     { copies: 0, earned: 0, pending: 0 },
   );
   const openTickets = tickets.filter((ticket) => ticket.status === "Open" || ticket.status === "In Progress");
+  const liveBooks = books.filter((book) => book.status === "Published & Live");
+  const marketplaceCount = new Set(books.flatMap((book) => book.availableOn)).size;
 
   const metrics = [
     { label: "Published books", value: books.length, detail: "Titles in your catalogue", icon: BookOpen, tone: "bg-[#e9f5f7] text-[#176786]" },
     { label: "Total copies sold", value: number.format(totals.copies), detail: "Across all titles", icon: ShoppingBag, tone: "bg-violet-50 text-violet-700" },
     { label: "Royalty earned", value: currency.format(totals.earned), detail: "Lifetime total", icon: TrendingUp, tone: "bg-emerald-50 text-emerald-700" },
-    { label: "Pending royalty", value: currency.format(totals.pending), detail: "Across 2 books", icon: BadgeIndianRupee, tone: "bg-amber-50 text-amber-700" },
+    { label: "Pending royalty", value: currency.format(totals.pending), detail: `Across ${books.length} ${books.length === 1 ? "book" : "books"}`, icon: BadgeIndianRupee, tone: "bg-amber-50 text-amber-700" },
   ];
 
   return (
@@ -60,6 +62,7 @@ export function AuthorDashboard({ author, books, tickets }: { author: { firstNam
         <section className="overflow-hidden rounded-2xl border border-[#dfe7ea] bg-white shadow-[0_8px_30px_rgba(24,57,70,0.04)]">
           <div className="flex items-center justify-between border-b border-[#e7edef] px-5 py-4 sm:px-6"><div><h2 className="font-bold text-[#172b36]">Your books</h2><p className="mt-1 text-xs text-[#78909b]">Current status and earnings at a glance</p></div><Link href="/author/books" className="text-sm font-semibold text-[#176786] hover:underline">View details</Link></div>
           <div className="divide-y divide-[#edf1f2]">
+            {books.length === 0 ? <div className="px-6 py-10 text-center"><BookOpen className="mx-auto size-6 text-[#9aabb2]" /><p className="mt-3 text-sm font-semibold text-[#405963]">No books linked yet</p><p className="mt-1 text-xs text-[#8a9da5]">Linked titles will appear here automatically.</p></div> : null}
             {books.map((book) => (
               <Link key={book.id} href="/author/books" className="group grid gap-4 px-5 py-5 transition hover:bg-[#f8fbfc] sm:grid-cols-[minmax(0,1fr)_130px_140px] sm:items-center sm:px-6">
                 <div className="flex min-w-0 items-center gap-4"><span className="grid size-12 shrink-0 place-items-center rounded-xl bg-[#e9f5f7] text-[#176786]"><BookOpen className="size-5" /></span><div className="min-w-0"><p className="truncate text-sm font-bold text-[#243e49] group-hover:text-[#176786]">{book.title}</p><p className="mt-1 truncate text-xs text-[#78909b]">{book.genre} · {book.isbn}</p></div></div>
@@ -78,7 +81,7 @@ export function AuthorDashboard({ author, books, tickets }: { author: { firstNam
             <Link href="/author/support" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-white hover:underline">Open support centre<ArrowRight className="size-4" /></Link>
           </section>
           <section className="rounded-2xl border border-[#dfe7ea] bg-white p-5">
-            <div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><CheckCircle2 className="size-[18px]" /></span><div><p className="text-sm font-bold text-[#29434f]">Both titles are live</p><p className="mt-0.5 text-xs text-[#78909b]">Across 5 unique marketplaces</p></div></div>
+            <div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><CheckCircle2 className="size-[18px]" /></span><div><p className="text-sm font-bold text-[#29434f]">{liveBooks.length} of {books.length} {books.length === 1 ? "title is" : "titles are"} live</p><p className="mt-0.5 text-xs text-[#78909b]">Across {marketplaceCount} unique {marketplaceCount === 1 ? "marketplace" : "marketplaces"}</p></div></div>
             <div className="mt-4 flex items-center gap-2 border-t border-[#edf1f2] pt-4 text-xs text-[#687f89]"><Clock3 className="size-4" />Marketplace updates may take 7–10 business days.</div>
           </section>
         </div>

@@ -3,15 +3,12 @@ import "server-only";
 import { cache } from "react";
 import { z } from "zod";
 
-import { ticketCategorySchema } from "@/lib/ai/schemas";
-
 import { requireClaims } from "./auth";
 import { DatabaseOperationError } from "./errors";
 import type { AuthorBook, AuthorSupportTicket, RoyaltyPayout } from "@/features/author/types";
 
 export const createTicketInputSchema = z.object({
   bookId: z.string().regex(/^BK\d{3,}$/).nullable(),
-  category: ticketCategorySchema,
   subject: z.string().trim().min(8).max(160),
   description: z.string().trim().min(20).max(4000),
 });
@@ -122,7 +119,9 @@ export async function createAuthorTicket(input: unknown) {
     .insert({
       author_id: author.id,
       book_id: value.bookId,
-      category: value.category,
+      // A safe fallback keeps ticket creation available when the AI provider is
+      // disabled. The asynchronous AI workflow can replace this classification.
+      category: "General Inquiry",
       subject: value.subject,
       description: value.description,
       priority: "Medium",
