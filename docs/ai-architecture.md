@@ -23,6 +23,18 @@ TicketAiService
 7. Provider metadata records the model, latency, request identifier, and token usage for auditability and cost monitoring.
 8. Timeouts, bounded retries, rate limits, malformed output, missing credentials, and provider outages all return a typed manual-review result.
 
+## Runtime workflow
+
+1. The author ticket is committed first.
+2. A non-blocking server task loads trusted author and book context with a server-only Supabase secret key.
+3. The model returns structured category, priority, confidence, rationale and urgency signals.
+4. The application validates the response, stores a complete `ai_runs` audit record and applies the advisory category/priority to the ticket.
+5. A category-scoped knowledge-base prompt creates the editable response draft.
+6. Every regeneration creates a new audit record. A failed regeneration never deletes the previous usable draft.
+7. Provider failures store a typed fallback code while the ticket remains available for manual processing.
+
+Audit records include provider, model, input/output token counts, combined latency, classification rationale, policy references and safe failure codes. API keys and raw provider errors are never returned to the browser.
+
 ## Configuration
 
 Copy `.env.example` to an ignored `.env.local` and choose one provider:

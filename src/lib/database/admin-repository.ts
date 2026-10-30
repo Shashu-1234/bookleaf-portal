@@ -17,7 +17,9 @@ export const getAdminPortalData = cache(async () => {
   const rows = await listAdminTickets();
   const now = Date.now();
   const tickets: AdminTicket[] = rows.map((ticket) => {
-    const ai = [...ticket.ai_runs].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+    const aiRuns = [...ticket.ai_runs].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    const ai = aiRuns[0];
+    const usableDraft = aiRuns.find((run) => run.draft_body);
     const staff = ticket.staff_profiles;
     return {
       id: `BL-${ticket.ticket_number}`,
@@ -52,9 +54,14 @@ export const getAdminPortalData = cache(async () => {
         confidence: ai?.confidence ?? null,
         rationale: ai?.rationale ?? null,
         urgencySignals: ai?.urgency_signals ?? [],
+        provider: ai?.provider ?? null,
         model: ai?.model ?? null,
+        inputTokens: ai?.input_tokens ?? null,
+        outputTokens: ai?.output_tokens ?? null,
+        latencyMs: ai?.latency_ms ?? null,
+        errorCode: ai?.error_code ?? null,
       },
-      draft: ai?.draft_body ? { subject: ai.draft_subject ?? ticket.subject, body: ai.draft_body, policyReferences: ai.policy_references } : null,
+      draft: usableDraft?.draft_body ? { subject: usableDraft.draft_subject ?? ticket.subject, body: usableDraft.draft_body, policyReferences: usableDraft.policy_references } : null,
       messages: ticket.ticket_messages.map((message) => ({
         id: message.id,
         sender: message.sender,
@@ -70,7 +77,7 @@ export const getAdminPortalData = cache(async () => {
       })),
       activity: [
         { id: `${ticket.id}-created`, label: "Ticket created", detail: `Submitted by ${ticket.authors.name}`, createdAt: dateTimeFormatter.format(new Date(ticket.created_at)) },
-        ...(ai ? [{ id: ai.id, label: ai.state === "ready" ? "AI triage available" : "Manual review mode", detail: ai.rationale ?? "Provider unavailable; human workflow preserved", createdAt: dateTimeFormatter.format(new Date(ai.created_at)) }] : []),
+        ...aiRuns.map((run) => ({ id: run.id, label: run.state === "ready" ? (run.draft_body ? "AI triage and draft available" : "AI triage available") : "Manual review mode", detail: run.rationale ?? "Provider unavailable; human workflow preserved", createdAt: dateTimeFormatter.format(new Date(run.created_at)) })),
       ],
     };
   });

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { TicketDetail } from "@/features/admin/components/ticket-detail";
+import { regenerateAdminDraft } from "@/lib/database/ai-repository";
 import { addAdminReply, addInternalNote, getAdminTicketByCode, getAdminTicketDatabaseId, updateAdminTicket } from "@/lib/database/admin-repository";
 import { requireRole } from "@/lib/database/auth";
 import { revalidatePath } from "next/cache";
@@ -34,5 +35,11 @@ export default async function TicketDetailPage({
     revalidatePath(`/admin/tickets/${ticketId}`);
     revalidatePath(`/author/support/${ticketId}`);
   }
-  return <TicketDetail ticket={ticket} updateAction={updateAction} noteAction={noteAction} replyAction={replyAction} />;
+  async function regenerateAction() {
+    "use server";
+    const result = await regenerateAdminDraft(await getAdminTicketDatabaseId(ticketId));
+    revalidatePath(`/admin/tickets/${ticketId}`);
+    return result;
+  }
+  return <TicketDetail ticket={ticket} updateAction={updateAction} noteAction={noteAction} replyAction={replyAction} regenerateAction={regenerateAction} />;
 }

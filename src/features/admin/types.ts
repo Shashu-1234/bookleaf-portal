@@ -30,7 +30,12 @@ export interface AdminTicket {
     confidence: number | null;
     rationale: string | null;
     urgencySignals: string[];
+    provider: string | null;
     model: string | null;
+    inputTokens: number | null;
+    outputTokens: number | null;
+    latencyMs: number | null;
+    errorCode: string | null;
   };
   draft: { subject: string; body: string; policyReferences: string[] } | null;
   messages: Array<{

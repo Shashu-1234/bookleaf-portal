@@ -1,9 +1,11 @@
 import "server-only";
 
+import { after } from "next/server";
 import { cache } from "react";
 import { z } from "zod";
 
 import { requireClaims } from "./auth";
+import { processNewTicketAi } from "./ai-repository";
 import { DatabaseOperationError } from "./errors";
 import type { AuthorBook, AuthorSupportTicket, RoyaltyPayout } from "@/features/author/types";
 
@@ -131,6 +133,20 @@ export async function createAuthorTicket(input: unknown) {
     .single();
 
   if (error) throw new DatabaseOperationError("Unable to create the support ticket.", "TICKET_CREATE_FAILED", { cause: error });
+
+  after(async () => {
+    try {
+      await processNewTicketAi(data.id);
+    } catch (aiError) {
+      // AI is intentionally non-blocking. The persisted ticket remains fully
+      // actionable even if trusted audit persistence or the provider fails.
+      console.error("[ticket-ai] Background processing failed", {
+        ticketId: data.id,
+        error: aiError instanceof Error ? aiError.message : "Unknown AI workflow error",
+      });
+    }
+  });
+
   return { ...data, code: `BL-${data.ticket_number}` };
 }
 

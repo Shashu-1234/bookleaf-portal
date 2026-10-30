@@ -16,6 +16,14 @@ const defaults: Pick<AdminTicket, DefaultedKey> = {
   activity: [],
 };
 
+const emptyAiAudit = {
+  provider: null,
+  inputTokens: null,
+  outputTokens: null,
+  latencyMs: null,
+  errorCode: null,
+};
+
 function ticket(
   value: Omit<AdminTicket, DefaultedKey> & Partial<Pick<AdminTicket, DefaultedKey>>,
 ): AdminTicket {
@@ -51,6 +59,7 @@ export const adminTickets: AdminTicket[] = [
       availableOn: ["Amazon India", "Flipkart", "Amazon US", "Amazon UK", "BookLeaf Store"],
     },
     ai: {
+      ...emptyAiAudit,
       state: "ready",
       confidence: 0.96,
       rationale:
@@ -118,6 +127,7 @@ export const adminTickets: AdminTicket[] = [
       availableOn: ["Amazon India", "Flipkart", "BookLeaf Store"],
     },
     ai: {
+      ...emptyAiAudit,
       state: "ready",
       confidence: 0.99,
       rationale:
@@ -163,6 +173,7 @@ export const adminTickets: AdminTicket[] = [
       availableOn: ["Amazon India", "BookLeaf Store"],
     },
     ai: {
+      ...emptyAiAudit,
       state: "ready",
       confidence: 0.98,
       rationale: "The author describes two specific manufacturing defects and offers evidence.",
@@ -194,6 +205,7 @@ export const adminTickets: AdminTicket[] = [
       availableOn: ["Amazon India", "Flipkart", "BookLeaf Store"],
     },
     ai: {
+      ...emptyAiAudit,
       state: "ready",
       confidence: 0.95,
       rationale: "A previously live listing becoming unavailable usually indicates a stock-sync issue.",
@@ -230,6 +242,7 @@ export const adminTickets: AdminTicket[] = [
       availableOn: [],
     },
     ai: {
+      ...emptyAiAudit,
       state: "manual_review",
       confidence: null,
       rationale: null,
@@ -269,6 +282,7 @@ export const adminTickets: AdminTicket[] = [
       availableOn: ["Amazon India", "Flipkart", "BookLeaf Store"],
     },
     ai: {
+      ...emptyAiAudit,
       state: "ready",
       confidence: 0.92,
       rationale: "The request is a routine post-publication metadata update.",
@@ -305,6 +319,7 @@ export const adminTickets: AdminTicket[] = [
       availableOn: ["Amazon India", "Flipkart", "Amazon US", "BookLeaf Store"],
     },
     ai: {
+      ...emptyAiAudit,
       state: "ready",
       confidence: 0.97,
       rationale: "The author requests transparency about royalty calculation rather than a missing payout.",

@@ -12,7 +12,6 @@ import {
   MessageSquareText,
   NotebookPen,
   RefreshCw,
-  Save,
   Send,
   ShieldCheck,
   Sparkles,
@@ -38,14 +37,19 @@ type TicketDetailProps = {
   updateAction: (formData: FormData) => Promise<void>;
   noteAction: (formData: FormData) => Promise<void>;
   replyAction: (formData: FormData) => Promise<void>;
+  regenerateAction: () => Promise<
+    | { status: "completed"; draft: string; policyReferences: string[] }
+    | { status: "manual_review_required"; reason: string }
+  >;
 };
 
-export function TicketDetail({ ticket, updateAction, noteAction, replyAction }: TicketDetailProps) {
+export function TicketDetail({ ticket, updateAction, noteAction, replyAction, regenerateAction }: TicketDetailProps) {
   const [status, setStatus] = useState(ticket.status);
   const [priority, setPriority] = useState<TicketPriority>(ticket.priority);
   const [category, setCategory] = useState<TicketCategory>(ticket.category);
   const [assignedTo, setAssignedTo] = useState(ticket.assignedTo);
   const [draft, setDraft] = useState(ticket.draft?.body ?? "");
+  const [policyReferences, setPolicyReferences] = useState(ticket.draft?.policyReferences ?? []);
   const [messages, setMessages] = useState(ticket.messages);
   const [notes, setNotes] = useState(ticket.internalNotes);
   const [newNote, setNewNote] = useState("");
@@ -93,6 +97,23 @@ export function TicketDetail({ ticket, updateAction, noteAction, replyAction }: 
       setMessages((current) => [...current, { id: `new-message-${current.length + 1}`, sender: "admin", senderName: "BookLeaf Support", body, createdAt: "Just now" }]);
       setStatus("In Progress");
       flash("Response sent and saved");
+    });
+  };
+
+  const regenerateDraft = () => {
+    startTransition(async () => {
+      try {
+        const result = await regenerateAction();
+        if (result.status === "completed") {
+          setDraft(result.draft);
+          setPolicyReferences(result.policyReferences);
+          flash("New AI draft generated — review every fact before sending");
+        } else {
+          flash(result.reason);
+        }
+      } catch {
+        flash("Draft generation failed safely. Continue with a manual response.");
+      }
     });
   };
 
@@ -153,18 +174,15 @@ export function TicketDetail({ ticket, updateAction, noteAction, replyAction }: 
               ) : null}
               <label className="text-xs font-bold uppercase tracking-[0.12em] text-[#687f89]">Reply to {ticket.author.name}</label>
               <textarea value={draft} onChange={(event) => setDraft(event.target.value)} rows={14} placeholder="Write a response or generate an AI draft…" className="scrollbar-thin mt-2 w-full resize-y rounded-xl border border-[#dfe7ea] bg-white p-4 text-sm leading-6 text-[#36535f] outline-none transition focus:border-[#76aabd]" />
-              {ticket.draft?.policyReferences.length ? <div className="mt-3 flex flex-wrap gap-2"><span className="text-xs font-semibold text-[#78909b]">Grounded in:</span>{ticket.draft.policyReferences.map((reference) => <span key={reference} className="rounded-full bg-[#f0f4f5] px-2.5 py-1 text-[10px] font-semibold text-[#58717c]">{reference}</span>)}</div> : null}
-              <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <button onClick={() => flash("Draft kept in the composer until sent")} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#dfe7ea] bg-white px-4 text-sm font-semibold text-[#425c67] hover:bg-[#f8fafb]"><Save className="size-4" />Save draft</button>
-                <div className="flex gap-3"><button onClick={() => flash("AI is disabled; manual workflow remains available")} className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-[#cfe7ed] bg-[#edf8fa] px-4 text-sm font-semibold text-[#176786] sm:flex-none"><RefreshCw className="size-4" />Regenerate</button><button disabled={pending} onClick={sendResponse} className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-[#176786] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#125a76] disabled:opacity-60 sm:flex-none"><Send className="size-4" />Send response</button></div>
-              </div>
+              {policyReferences.length ? <div className="mt-3 flex flex-wrap gap-2"><span className="text-xs font-semibold text-[#78909b]">Grounded in:</span>{policyReferences.map((reference) => <span key={reference} className="rounded-full bg-[#f0f4f5] px-2.5 py-1 text-[10px] font-semibold text-[#58717c]">{reference}</span>)}</div> : null}
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs leading-5 text-[#78909b]">Edits remain private until you send the response.</p><div className="flex gap-3"><button disabled={pending} onClick={regenerateDraft} className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-[#cfe7ed] bg-[#edf8fa] px-4 text-sm font-semibold text-[#176786] disabled:opacity-60 sm:flex-none"><RefreshCw className={`size-4 ${pending ? "animate-spin" : ""}`} />Regenerate</button><button disabled={pending} onClick={sendResponse} className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-[#176786] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#125a76] disabled:opacity-60 sm:flex-none"><Send className="size-4" />Send response</button></div></div>
             </div>
           </section>
         </div>
 
         <aside className="space-y-5">
           <section className="overflow-hidden rounded-2xl border border-[#dfe7ea] bg-white shadow-[0_8px_30px_rgba(24,57,70,0.04)]">
-            <SectionHeader icon={Bot} title="AI triage" subtitle={ticket.ai.model ?? "Manual review mode"} />
+            <SectionHeader icon={Bot} title="AI triage" subtitle={ticket.ai.provider && ticket.ai.model ? `${ticket.ai.provider} · ${ticket.ai.model}` : "Manual review mode"} />
             <div className="space-y-4 p-5">
               {ticket.ai.state === "ready" ? (
                 <><div className="rounded-xl border border-[#cfe7ed] bg-[#f4fafb] p-4"><div className="flex items-center justify-between gap-3"><span className="text-xs font-bold uppercase tracking-wider text-[#176786]">Confidence</span><span className="text-lg font-bold text-[#176786]">{Math.round((ticket.ai.confidence ?? 0) * 100)}%</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#d9ebef]"><div className="h-full rounded-full bg-[#2b91ad]" style={{ width: `${(ticket.ai.confidence ?? 0) * 100}%` }} /></div></div><p className="text-sm leading-6 text-[#58717c]">{ticket.ai.rationale}</p></>
@@ -174,6 +192,8 @@ export function TicketDetail({ ticket, updateAction, noteAction, replyAction }: 
               <ControlSelect label="Category override" value={category} onChange={(value) => { setCategory(value as TicketCategory); mutate("category", value, "Category override saved"); }} options={ticketCategories} />
               <ControlSelect label="Priority override" value={priority} onChange={(value) => { setPriority(value as TicketPriority); mutate("priority", value, "Priority override saved"); }} options={ticketPriorities} />
               {ticket.ai.urgencySignals.length ? <div><p className="text-xs font-bold uppercase tracking-wider text-[#78909b]">Urgency signals</p><div className="mt-2 flex flex-wrap gap-2">{ticket.ai.urgencySignals.map((signal) => <span key={signal} className="rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-[10px] font-semibold text-orange-700">{signal}</span>)}</div></div> : null}
+              {ticket.ai.inputTokens !== null || ticket.ai.outputTokens !== null || ticket.ai.latencyMs !== null ? <dl className="grid grid-cols-3 gap-2 border-t border-[#edf1f2] pt-4 text-center"><div><dt className="text-[9px] font-bold uppercase tracking-wide text-[#8a9da5]">Input</dt><dd className="mt-1 text-xs font-semibold text-[#405963]">{ticket.ai.inputTokens ?? "—"}</dd></div><div><dt className="text-[9px] font-bold uppercase tracking-wide text-[#8a9da5]">Output</dt><dd className="mt-1 text-xs font-semibold text-[#405963]">{ticket.ai.outputTokens ?? "—"}</dd></div><div><dt className="text-[9px] font-bold uppercase tracking-wide text-[#8a9da5]">Latency</dt><dd className="mt-1 text-xs font-semibold text-[#405963]">{ticket.ai.latencyMs !== null ? `${ticket.ai.latencyMs} ms` : "—"}</dd></div></dl> : null}
+              {ticket.ai.errorCode ? <p className="rounded-lg bg-violet-50 px-3 py-2 font-mono text-[10px] text-violet-700">Fallback code: {ticket.ai.errorCode}</p> : null}
             </div>
           </section>
 
