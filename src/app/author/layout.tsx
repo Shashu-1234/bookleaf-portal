@@ -3,14 +3,14 @@ import { Suspense } from "react";
 
 import { AuthorShell } from "@/features/author/components/author-shell";
 import { requireRole } from "@/lib/database/auth";
-import { getAuthorPortalData } from "@/lib/database/author-repository";
+import { getAuthorShellProfile } from "@/lib/database/author-repository";
 
 export const metadata: Metadata = { title: "Author Portal" };
 export const instant = false;
 
 export default async function AuthorLayout({ children }: { children: React.ReactNode }) {
   await requireRole(["author"]);
-  const { author } = await getAuthorPortalData();
+  const author = await getAuthorShellProfile();
   return (
     <Suspense fallback={<AuthorShellFallback />}>
       <AuthorShell author={author}>{children}</AuthorShell>

@@ -2,10 +2,10 @@ import { AlertTriangle, ArrowRight, Bot, CheckCircle2, Clock3, Inbox } from "luc
 import Link from "next/link";
 
 import { formatAge, priorityRank } from "../formatters";
-import type { AdminTicket } from "../types";
+import type { AdminOverviewTicket } from "../types";
 import { PriorityBadge, StatusBadge } from "./ticket-badges";
 
-export function OverviewDashboard({ tickets, adminName }: { tickets: AdminTicket[]; adminName: string }) {
+export function OverviewDashboard({ tickets, adminName }: { tickets: AdminOverviewTicket[]; adminName: string }) {
   const unresolved = tickets.filter((entry) => entry.status === "Open" || entry.status === "In Progress");
   const urgent = unresolved.filter((entry) => entry.priority === "Critical" || entry.priority === "High");
   const unassigned = unresolved.filter((entry) => !entry.assignedTo);

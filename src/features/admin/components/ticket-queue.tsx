@@ -7,12 +7,12 @@ import { useMemo, useState } from "react";
 import { ticketCategories, ticketPriorities } from "@/lib/ai/schemas";
 import { formatAge } from "../formatters";
 import { filterAndSortTickets } from "../ticket-queue-model";
-import type { AdminTicket, TicketStatus } from "../types";
+import type { AdminTicketQueueItem, TicketStatus } from "../types";
 import { PriorityBadge, StatusBadge } from "./ticket-badges";
 
 const statuses: TicketStatus[] = ["Open", "In Progress", "Resolved", "Closed"];
 
-export function TicketQueue({ tickets }: { tickets: AdminTicket[] }) {
+export function TicketQueue({ tickets }: { tickets: AdminTicketQueueItem[] }) {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All");
   const [category, setCategory] = useState("All");

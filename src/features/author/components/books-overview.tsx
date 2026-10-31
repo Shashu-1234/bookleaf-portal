@@ -1,9 +1,9 @@
 import { BadgeIndianRupee, BookOpen, CalendarDays, CheckCircle2, ExternalLink, PackageCheck, Store, WalletCards } from "lucide-react";
 
 import { currency, number } from "../formatters";
-import type { AuthorBook } from "../types";
+import type { AuthorCatalogueBook } from "../types";
 
-export function BooksOverview({ books }: { books: AuthorBook[] }) {
+export function BooksOverview({ books }: { books: AuthorCatalogueBook[] }) {
   return (
     <div className="space-y-6">
       <div><p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-[#176786]">Publishing catalogue</p><h1 className="text-2xl font-bold tracking-[-0.03em] text-[#172b36] sm:text-3xl">My books</h1><p className="mt-2 text-sm leading-6 text-[#687f89]">Publication status, marketplace availability and performance for every title.</p></div>

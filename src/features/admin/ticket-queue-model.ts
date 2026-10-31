@@ -1,5 +1,5 @@
 import { priorityRank } from "./formatters";
-import type { AdminTicket } from "./types";
+import type { AdminTicketQueueItem } from "./types";
 
 export interface TicketQueueFilters {
   search: string;
@@ -11,9 +11,9 @@ export interface TicketQueueFilters {
 }
 
 export function filterAndSortTickets(
-  tickets: AdminTicket[],
+  tickets: AdminTicketQueueItem[],
   filters: TicketQueueFilters,
-): AdminTicket[] {
+): AdminTicketQueueItem[] {
   const query = filters.search.trim().toLowerCase();
   const ageLimit =
     filters.age === "24h"

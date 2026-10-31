@@ -48,3 +48,28 @@ export interface AdminTicket {
   internalNotes: Array<{ id: string; author: string; body: string; createdAt: string }>;
   activity: Array<{ id: string; label: string; detail: string; createdAt: string }>;
 }
+
+export type AdminOverviewTicket = Pick<
+  AdminTicket,
+  "id" | "subject" | "priority" | "status" | "ageHours" | "assignedTo"
+> & {
+  author: Pick<AdminTicket["author"], "name">;
+  book: Pick<NonNullable<AdminTicket["book"]>, "title"> | null;
+  ai: Pick<AdminTicket["ai"], "state">;
+};
+
+export type AdminTicketQueueItem = Pick<
+  AdminTicket,
+  | "id"
+  | "subject"
+  | "description"
+  | "category"
+  | "priority"
+  | "status"
+  | "ageHours"
+  | "assignedTo"
+> & {
+  author: Pick<AdminTicket["author"], "name" | "email">;
+  book: Pick<NonNullable<AdminTicket["book"]>, "title" | "isbn"> | null;
+  ai: Pick<AdminTicket["ai"], "state">;
+};

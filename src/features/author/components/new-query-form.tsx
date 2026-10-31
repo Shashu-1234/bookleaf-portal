@@ -4,9 +4,9 @@ import { ArrowLeft, Info, Paperclip, Send } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-import type { AuthorBook } from "../types";
+import type { AuthorBookOption } from "../types";
 
-export function NewQueryForm({ books, action }: { books: AuthorBook[]; action: (formData: FormData) => Promise<void> }) {
+export function NewQueryForm({ books, action }: { books: AuthorBookOption[]; action: (formData: FormData) => Promise<void> }) {
   const [attachmentName, setAttachmentName] = useState("");
   const [attachmentError, setAttachmentError] = useState("");
 

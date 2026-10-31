@@ -1,9 +1,9 @@
 import { BadgeIndianRupee, CheckCircle2, CircleDollarSign, Download, Info, WalletCards } from "lucide-react";
 
 import { currency } from "../formatters";
-import type { AuthorBook, RoyaltyPayout } from "../types";
+import type { AuthorRoyaltyBook, RoyaltyPayout } from "../types";
 
-export function RoyaltiesOverview({ books, payouts }: { books: AuthorBook[]; payouts: RoyaltyPayout[] }) {
+export function RoyaltiesOverview({ books, payouts }: { books: AuthorRoyaltyBook[]; payouts: RoyaltyPayout[] }) {
   const totals = books.reduce((summary, book) => ({ earned: summary.earned + book.totalRoyaltyEarned, paid: summary.paid + book.royaltyPaid, pending: summary.pending + book.royaltyPending }), { earned: 0, paid: 0, pending: 0 });
   return (
     <div className="space-y-6">

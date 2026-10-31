@@ -13,18 +13,50 @@ import { requireRole } from "./auth";
 import { DatabaseOperationError } from "./errors";
 
 type DatabaseClient = SupabaseClient<Database>;
-type TicketWithContext = Tables<"tickets"> & {
-  authors: Tables<"authors">;
-  books: Tables<"books"> | null;
-  ticket_messages: Tables<"ticket_messages">[];
-  ai_runs: Tables<"ai_runs">[];
+type TicketWithContext = Pick<
+  Tables<"tickets">,
+  "id" | "subject" | "description" | "created_at" | "category" | "priority"
+> & {
+  authors: Pick<Tables<"authors">, "name">;
+  books:
+    | Pick<
+        Tables<"books">,
+        | "id"
+        | "title"
+        | "isbn"
+        | "status"
+        | "publication_date"
+        | "mrp"
+        | "total_copies_sold"
+        | "total_royalty_earned"
+        | "royalty_paid"
+        | "royalty_pending"
+        | "last_royalty_payout_date"
+        | "available_on"
+      >
+    | null;
+  ticket_messages: Pick<Tables<"ticket_messages">, "sender" | "body" | "created_at">[];
+  ai_runs: Pick<
+    Tables<"ai_runs">,
+    "suggested_category" | "suggested_priority" | "rationale" | "created_at"
+  >[];
 };
 
 async function loadTicketContext(client: DatabaseClient, ticketId: string) {
   const id = z.string().uuid().parse(ticketId);
   const { data, error } = await client
     .from("tickets")
-    .select("*, authors(*), books(*), ticket_messages(*), ai_runs(*)")
+    .select(`
+      id, subject, description, created_at, category, priority,
+      authors(name),
+      books(
+        id, title, isbn, status, publication_date, mrp, total_copies_sold,
+        total_royalty_earned, royalty_paid, royalty_pending,
+        last_royalty_payout_date, available_on
+      ),
+      ticket_messages(sender, body, created_at),
+      ai_runs(suggested_category, suggested_priority, rationale, created_at)
+    `)
     .eq("id", id)
     .single();
 

@@ -4,10 +4,21 @@ import { after } from "next/server";
 import { cache } from "react";
 import { z } from "zod";
 
-import { requireClaims } from "./auth";
+import type {
+  AuthorBookOption,
+  AuthorCatalogueBook,
+  AuthorDashboardBook,
+  AuthorDashboardTicket,
+  AuthorRoyaltyBook,
+  AuthorShellProfile,
+  AuthorSupportTicket,
+  AuthorSupportTicketSummary,
+  RoyaltyPayout,
+} from "@/features/author/types";
+
 import { processNewTicketAi } from "./ai-repository";
+import { requireClaims } from "./auth";
 import { DatabaseOperationError } from "./errors";
-import type { AuthorBook, AuthorSupportTicket, RoyaltyPayout } from "@/features/author/types";
 
 export const createTicketInputSchema = z.object({
   bookId: z.string().regex(/^BK\d{3,}$/).nullable(),
@@ -15,21 +26,18 @@ export const createTicketInputSchema = z.object({
   description: z.string().trim().min(20).max(4000),
 });
 
-export async function getCurrentAuthorWorkspace() {
-  const { supabase, claims } = await requireClaims();
-  const { data, error } = await supabase
-    .from("authors")
-    .select("*, books(*), royalty_payouts(*), tickets(*, ticket_messages(*))")
-    .eq("user_id", claims.sub)
-    .order("created_at", { referencedTable: "tickets", ascending: false })
-    .maybeSingle();
-
-  if (error) throw new DatabaseOperationError("Unable to load the author workspace.", "AUTHOR_WORKSPACE_QUERY_FAILED", { cause: error });
-  return data;
-}
-
-const dateFormatter = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" });
-const dateTimeFormatter = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const dateFormatter = new Intl.DateTimeFormat("en-IN", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+const dateTimeFormatter = new Intl.DateTimeFormat("en-IN", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
 
 function formatDate(value: string | null) {
   return value ? dateFormatter.format(new Date(value)) : "Not available";
@@ -39,11 +47,111 @@ function formatDateTime(value: string) {
   return dateTimeFormatter.format(new Date(value));
 }
 
-export const getAuthorPortalData = cache(async () => {
-  const workspace = await getCurrentAuthorWorkspace();
-  if (!workspace) throw new DatabaseOperationError("The signed-in user is not linked to an author account.", "AUTHOR_LINK_NOT_FOUND");
+function initials(name: string) {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
 
-  const books: AuthorBook[] = workspace.books.map((book) => ({
+function requireAuthorWorkspace<T>(data: T | null): T {
+  if (!data) {
+    throw new DatabaseOperationError(
+      "The signed-in user is not linked to an author account.",
+      "AUTHOR_LINK_NOT_FOUND",
+    );
+  }
+  return data;
+}
+
+export const getAuthorShellProfile = cache(async (): Promise<AuthorShellProfile> => {
+  const { supabase, claims } = await requireClaims();
+  const { data, error } = await supabase
+    .from("authors")
+    .select("id, name")
+    .eq("user_id", claims.sub)
+    .maybeSingle();
+
+  if (error) {
+    throw new DatabaseOperationError(
+      "Unable to load the author profile.",
+      "AUTHOR_PROFILE_QUERY_FAILED",
+      { cause: error },
+    );
+  }
+
+  const author = requireAuthorWorkspace(data);
+  return { id: author.id, name: author.name, initials: initials(author.name) };
+});
+
+export const getAuthorDashboardData = cache(async () => {
+  const { supabase, claims } = await requireClaims();
+  const { data, error } = await supabase
+    .from("authors")
+    .select(`
+      name,
+      books(id, title, isbn, genre, status, total_copies_sold, total_royalty_earned, royalty_pending, available_on),
+      tickets(status)
+    `)
+    .eq("user_id", claims.sub)
+    .maybeSingle();
+
+  if (error) {
+    throw new DatabaseOperationError(
+      "Unable to load the author dashboard.",
+      "AUTHOR_DASHBOARD_QUERY_FAILED",
+      { cause: error },
+    );
+  }
+
+  const workspace = requireAuthorWorkspace(data);
+  const books: AuthorDashboardBook[] = workspace.books.map((book) => ({
+    id: book.id,
+    title: book.title,
+    isbn: book.isbn,
+    genre: book.genre,
+    status: book.status,
+    totalCopiesSold: book.total_copies_sold,
+    totalRoyaltyEarned: Number(book.total_royalty_earned),
+    royaltyPending: Number(book.royalty_pending),
+    availableOn: book.available_on,
+  }));
+  const tickets: AuthorDashboardTicket[] = workspace.tickets.map((ticket) => ({
+    status: ticket.status,
+  }));
+
+  return {
+    author: { firstName: workspace.name.split(" ")[0] },
+    books,
+    tickets,
+  };
+});
+
+export const getAuthorCatalogue = cache(async (): Promise<AuthorCatalogueBook[]> => {
+  const { supabase, claims } = await requireClaims();
+  const { data, error } = await supabase
+    .from("authors")
+    .select(`
+      books(
+        id, title, isbn, genre, publication_date, status, mrp,
+        author_royalty_per_copy, total_copies_sold, total_royalty_earned,
+        royalty_paid, royalty_pending, print_partner, available_on
+      )
+    `)
+    .eq("user_id", claims.sub)
+    .maybeSingle();
+
+  if (error) {
+    throw new DatabaseOperationError(
+      "Unable to load the author catalogue.",
+      "AUTHOR_CATALOGUE_QUERY_FAILED",
+      { cause: error },
+    );
+  }
+
+  return requireAuthorWorkspace(data).books.map((book) => ({
     id: book.id,
     title: book.title,
     isbn: book.isbn,
@@ -56,29 +164,40 @@ export const getAuthorPortalData = cache(async () => {
     totalRoyaltyEarned: Number(book.total_royalty_earned),
     royaltyPaid: Number(book.royalty_paid),
     royaltyPending: Number(book.royalty_pending),
-    lastPayoutDate: formatDate(book.last_royalty_payout_date),
     printPartner: book.print_partner ?? "Not assigned",
     availableOn: book.available_on,
   }));
+});
 
-  const tickets: AuthorSupportTicket[] = workspace.tickets.map((ticket) => ({
-    id: `BL-${ticket.ticket_number}`,
-    subject: ticket.subject,
-    description: ticket.description,
-    category: ticket.category,
-    status: ticket.status,
-    createdAt: formatDateTime(ticket.created_at),
-    updatedAt: formatDateTime(ticket.updated_at),
-    bookId: ticket.book_id,
-    messages: ticket.ticket_messages.map((message) => ({
-      id: message.id,
-      sender: message.sender === "admin" ? "support" : "author",
-      senderName: message.sender_name,
-      body: message.body,
-      createdAt: formatDateTime(message.created_at),
-    })),
+export const getAuthorRoyalties = cache(async () => {
+  const { supabase, claims } = await requireClaims();
+  const { data, error } = await supabase
+    .from("authors")
+    .select(`
+      books(id, title, total_royalty_earned, royalty_paid, royalty_pending, last_royalty_payout_date),
+      royalty_payouts(id, period_start, period_end, paid_at, created_at, amount, status, reference)
+    `)
+    .eq("user_id", claims.sub)
+    .order("created_at", { referencedTable: "royalty_payouts", ascending: false })
+    .maybeSingle();
+
+  if (error) {
+    throw new DatabaseOperationError(
+      "Unable to load royalty data.",
+      "AUTHOR_ROYALTIES_QUERY_FAILED",
+      { cause: error },
+    );
+  }
+
+  const workspace = requireAuthorWorkspace(data);
+  const books: AuthorRoyaltyBook[] = workspace.books.map((book) => ({
+    id: book.id,
+    title: book.title,
+    totalRoyaltyEarned: Number(book.total_royalty_earned),
+    royaltyPaid: Number(book.royalty_paid),
+    royaltyPending: Number(book.royalty_pending),
+    lastPayoutDate: formatDate(book.last_royalty_payout_date),
   }));
-
   const payouts: RoyaltyPayout[] = workspace.royalty_payouts.map((payout) => ({
     id: payout.id,
     period: `${formatDate(payout.period_start)} – ${formatDate(payout.period_end)}`,
@@ -88,22 +207,121 @@ export const getAuthorPortalData = cache(async () => {
     reference: payout.reference ?? "Pending reference",
   }));
 
-  return {
-    author: {
-      id: workspace.id,
-      name: workspace.name,
-      firstName: workspace.name.split(" ")[0],
-      email: workspace.email,
-      phone: workspace.phone ?? "Not provided",
-      city: workspace.city ?? "Not provided",
-      joinedDate: formatDate(workspace.joined_date),
-      initials: workspace.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase(),
-    },
-    books,
-    tickets,
-    payouts,
-  };
+  return { books, payouts };
 });
+
+export const getAuthorSupportData = cache(async () => {
+  const { supabase, claims } = await requireClaims();
+  const { data, error } = await supabase
+    .from("authors")
+    .select(`
+      books(id, title),
+      tickets(ticket_number, subject, category, status, updated_at, book_id, ticket_messages(id))
+    `)
+    .eq("user_id", claims.sub)
+    .order("updated_at", { referencedTable: "tickets", ascending: false })
+    .maybeSingle();
+
+  if (error) {
+    throw new DatabaseOperationError(
+      "Unable to load support queries.",
+      "AUTHOR_SUPPORT_QUERY_FAILED",
+      { cause: error },
+    );
+  }
+
+  const workspace = requireAuthorWorkspace(data);
+  const books: AuthorBookOption[] = workspace.books.map((book) => ({
+    id: book.id,
+    title: book.title,
+  }));
+  const tickets: AuthorSupportTicketSummary[] = workspace.tickets.map((ticket) => ({
+    id: `BL-${ticket.ticket_number}`,
+    subject: ticket.subject,
+    category: ticket.category,
+    status: ticket.status,
+    updatedAt: formatDateTime(ticket.updated_at),
+    bookId: ticket.book_id,
+    messageCount: ticket.ticket_messages.length,
+  }));
+
+  return { books, tickets };
+});
+
+export const getAuthorBookOptions = cache(async (): Promise<AuthorBookOption[]> => {
+  const { supabase, claims } = await requireClaims();
+  const { data, error } = await supabase
+    .from("authors")
+    .select("books(id, title)")
+    .eq("user_id", claims.sub)
+    .maybeSingle();
+
+  if (error) {
+    throw new DatabaseOperationError(
+      "Unable to load book options.",
+      "AUTHOR_BOOK_OPTIONS_QUERY_FAILED",
+      { cause: error },
+    );
+  }
+
+  return requireAuthorWorkspace(data).books.map((book) => ({
+    id: book.id,
+    title: book.title,
+  }));
+});
+
+export async function getAuthorTicketByCode(code: string) {
+  const ticketNumber = z
+    .string()
+    .regex(/^BL-\d+$/)
+    .transform((value) => Number(value.slice(3)))
+    .parse(code);
+  const { supabase } = await requireClaims();
+  const { data, error } = await supabase
+    .from("tickets")
+    .select(`
+      ticket_number, subject, description, category, status, created_at, updated_at, book_id,
+      authors(name),
+      books(id, title),
+      ticket_messages(id, sender, sender_name, body, created_at)
+    `)
+    .eq("ticket_number", ticketNumber)
+    .order("created_at", { referencedTable: "ticket_messages", ascending: true })
+    .maybeSingle();
+
+  if (error) {
+    throw new DatabaseOperationError(
+      "Unable to load the support ticket.",
+      "AUTHOR_TICKET_QUERY_FAILED",
+      { cause: error },
+    );
+  }
+  if (!data) return null;
+
+  const ticket: AuthorSupportTicket = {
+    id: `BL-${data.ticket_number}`,
+    subject: data.subject,
+    description: data.description,
+    category: data.category,
+    status: data.status,
+    createdAt: formatDateTime(data.created_at),
+    updatedAt: formatDateTime(data.updated_at),
+    bookId: data.book_id,
+    messages: data.ticket_messages.map((message) => ({
+      id: message.id,
+      sender: message.sender === "admin" ? "support" : "author",
+      senderName: message.sender_name,
+      body: message.body,
+      createdAt: formatDateTime(message.created_at),
+    })),
+  };
+
+  return {
+    ticket,
+    book: data.books ? { id: data.books.id, title: data.books.title } : null,
+    author: { name: data.authors.name, initials: initials(data.authors.name) },
+  };
+}
 
 export async function createAuthorTicket(input: unknown) {
   const value = createTicketInputSchema.parse(input);
@@ -114,32 +332,40 @@ export async function createAuthorTicket(input: unknown) {
     .eq("user_id", claims.sub)
     .single();
 
-  if (authorError) throw new DatabaseOperationError("The signed-in user is not linked to an author account.", "AUTHOR_LINK_NOT_FOUND", { cause: authorError });
+  if (authorError) {
+    throw new DatabaseOperationError(
+      "The signed-in user is not linked to an author account.",
+      "AUTHOR_LINK_NOT_FOUND",
+      { cause: authorError },
+    );
+  }
 
   const { data, error } = await supabase
     .from("tickets")
     .insert({
       author_id: author.id,
       book_id: value.bookId,
-      // A safe fallback keeps ticket creation available when the AI provider is
-      // disabled. The asynchronous AI workflow can replace this classification.
       category: "General Inquiry",
       subject: value.subject,
       description: value.description,
       priority: "Medium",
       status: "Open",
     })
-    .select("id, ticket_number, created_at")
+    .select("id, ticket_number")
     .single();
 
-  if (error) throw new DatabaseOperationError("Unable to create the support ticket.", "TICKET_CREATE_FAILED", { cause: error });
+  if (error) {
+    throw new DatabaseOperationError(
+      "Unable to create the support ticket.",
+      "TICKET_CREATE_FAILED",
+      { cause: error },
+    );
+  }
 
   after(async () => {
     try {
       await processNewTicketAi(data.id);
     } catch (aiError) {
-      // AI is intentionally non-blocking. The persisted ticket remains fully
-      // actionable even if trusted audit persistence or the provider fails.
       console.error("[ticket-ai] Background processing failed", {
         ticketId: data.id,
         error: aiError instanceof Error ? aiError.message : "Unknown AI workflow error",
@@ -159,16 +385,39 @@ export async function addAuthorReply(ticketId: string, body: string) {
     .select("name")
     .eq("user_id", claims.sub)
     .single();
-  if (authorError) throw new DatabaseOperationError("The signed-in user is not linked to an author account.", "AUTHOR_LINK_NOT_FOUND", { cause: authorError });
+  if (authorError) {
+    throw new DatabaseOperationError(
+      "The signed-in user is not linked to an author account.",
+      "AUTHOR_LINK_NOT_FOUND",
+      { cause: authorError },
+    );
+  }
 
-  const { data: ticket, error: ticketError } = await supabase.from("tickets").select("id").eq("ticket_number", ticketNumber).single();
-  if (ticketError) throw new DatabaseOperationError("The support ticket could not be found.", "TICKET_NOT_FOUND", { cause: ticketError });
-
-  const { data, error } = await supabase
-    .from("ticket_messages")
-    .insert({ ticket_id: ticket.id, sender: "author", sender_user_id: claims.sub, sender_name: author.name, body: cleanBody })
-    .select("*")
+  const { data: ticket, error: ticketError } = await supabase
+    .from("tickets")
+    .select("id")
+    .eq("ticket_number", ticketNumber)
     .single();
-  if (error) throw new DatabaseOperationError("Unable to add the ticket reply.", "TICKET_REPLY_FAILED", { cause: error });
-  return data;
+  if (ticketError) {
+    throw new DatabaseOperationError(
+      "The support ticket could not be found.",
+      "TICKET_NOT_FOUND",
+      { cause: ticketError },
+    );
+  }
+
+  const { error } = await supabase.from("ticket_messages").insert({
+    ticket_id: ticket.id,
+    sender: "author",
+    sender_user_id: claims.sub,
+    sender_name: author.name,
+    body: cleanBody,
+  });
+  if (error) {
+    throw new DatabaseOperationError(
+      "Unable to add the ticket reply.",
+      "TICKET_REPLY_FAILED",
+      { cause: error },
+    );
+  }
 }

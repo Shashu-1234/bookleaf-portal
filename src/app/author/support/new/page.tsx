@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 
 import { NewQueryForm } from "@/features/author/components/new-query-form";
-import { createAuthorTicket, getAuthorPortalData } from "@/lib/database/author-repository";
+import { createAuthorTicket, getAuthorBookOptions } from "@/lib/database/author-repository";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = { title: "New Support Query" };
 
 export default async function NewAuthorQueryPage() {
-  const { books } = await getAuthorPortalData();
+  const books = await getAuthorBookOptions();
   async function createTicketAction(formData: FormData) {
     "use server";
     const ticket = await createAuthorTicket({

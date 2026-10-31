@@ -11,9 +11,9 @@ import {
 import Link from "next/link";
 
 import { currency, number } from "../formatters";
-import type { AuthorBook, AuthorSupportTicket } from "../types";
+import type { AuthorDashboardBook, AuthorDashboardTicket } from "../types";
 
-export function AuthorDashboard({ author, books, tickets }: { author: { firstName: string }; books: AuthorBook[]; tickets: AuthorSupportTicket[] }) {
+export function AuthorDashboard({ author, books, tickets }: { author: { firstName: string }; books: AuthorDashboardBook[]; tickets: AuthorDashboardTicket[] }) {
   const totals = books.reduce(
     (summary, book) => ({
       copies: summary.copies + book.totalCopiesSold,

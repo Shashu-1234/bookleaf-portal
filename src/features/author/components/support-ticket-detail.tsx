@@ -4,10 +4,10 @@ import { ArrowLeft, BookOpen, CheckCircle2, Clock3, MessageSquareReply, Send } f
 import Link from "next/link";
 import { useState } from "react";
 
-import type { AuthorBook, AuthorSupportTicket } from "../types";
+import type { AuthorBookOption, AuthorSupportTicket } from "../types";
 import { AuthorTicketStatus } from "./support-badges";
 
-export function SupportTicketDetail({ ticket, book, author, replyAction }: { ticket: AuthorSupportTicket; book: AuthorBook | null; author: { name: string; initials: string }; replyAction: (formData: FormData) => Promise<void> }) {
+export function SupportTicketDetail({ ticket, book, author, replyAction }: { ticket: AuthorSupportTicket; book: AuthorBookOption | null; author: { name: string; initials: string }; replyAction: (formData: FormData) => Promise<void> }) {
   const [reply, setReply] = useState("");
   const closed = ticket.status === "Closed";
 
