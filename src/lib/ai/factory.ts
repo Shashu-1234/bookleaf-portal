@@ -52,7 +52,7 @@ export function createTicketAiService(
     return new TicketAiService({
       provider: new GeminiProvider({
         apiKey: environment.GEMINI_API_KEY,
-        model: environment.GEMINI_MODEL ?? "gemini-2.5-flash-lite",
+        model: environment.GEMINI_MODEL ?? "gemini-3.5-flash-lite",
       }),
       timeoutMs,
       maxAttempts,
