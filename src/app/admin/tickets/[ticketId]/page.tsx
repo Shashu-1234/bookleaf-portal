@@ -5,15 +5,21 @@ import { regenerateAdminDraft } from "@/lib/database/ai-repository";
 import { addAdminReply, addInternalNote, getAdminTicketByCode, getAdminTicketDatabaseId, updateAdminTicket } from "@/lib/database/admin-repository";
 import { requireRole } from "@/lib/database/auth";
 import { revalidatePath } from "next/cache";
+import { parsePage } from "@/lib/pagination";
+import { redirect } from "next/navigation";
 
 export default async function TicketDetailPage({
-  params,
+  params, searchParams,
 }: {
   params: Promise<{ ticketId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { ticketId } = await params;
-  const ticket = await getAdminTicketByCode(ticketId);
-  if (!ticket) notFound();
+  const query = await searchParams;
+  const detail = await getAdminTicketByCode(ticketId, parsePage(query.messagesPage));
+  if (!detail) notFound();
+  const { ticket, messagePagination } = detail;
+  if (messagePagination.page > messagePagination.totalPages) redirect(`/admin/tickets/${ticketId}${messagePagination.totalPages > 1 ? `?messagesPage=${messagePagination.totalPages}` : ""}`);
   async function updateAction(formData: FormData) {
     "use server";
     const id = await getAdminTicketDatabaseId(ticketId);
@@ -41,5 +47,5 @@ export default async function TicketDetailPage({
     revalidatePath(`/admin/tickets/${ticketId}`);
     return result;
   }
-  return <TicketDetail ticket={ticket} updateAction={updateAction} noteAction={noteAction} replyAction={replyAction} regenerateAction={regenerateAction} />;
+  return <TicketDetail ticket={ticket} messagePagination={messagePagination} updateAction={updateAction} noteAction={noteAction} replyAction={replyAction} regenerateAction={regenerateAction} />;
 }

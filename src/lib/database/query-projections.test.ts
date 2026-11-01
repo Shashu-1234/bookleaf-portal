@@ -46,4 +46,14 @@ describe("database query projections", () => {
     expect(source).toContain("getAdminTicketByCode");
     expect(source).not.toContain("getAdminPortalData");
   });
+
+  it("bounds ticket and message reads with database ranges", () => {
+    const author = repositorySource("author-repository.ts");
+    const admin = repositorySource("admin-repository.ts");
+
+    expect(author.match(/\.range\(from, to\)/g)).toHaveLength(2);
+    expect(admin.match(/\.range\(from, to\)/g)).toHaveLength(2);
+    expect(author).toContain('{ count: "exact" }');
+    expect(admin).toContain('{ count: "exact" }');
+  });
 });

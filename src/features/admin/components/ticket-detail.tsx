@@ -20,6 +20,8 @@ import {
 import Link from "next/link";
 import { useState, useTransition } from "react";
 
+import { Pagination } from "@/features/shared/components/pagination";
+import type { PaginationMeta } from "@/lib/pagination";
 import {
   ticketCategories,
   ticketPriorities,
@@ -34,6 +36,7 @@ const statuses: TicketStatus[] = ["Open", "In Progress", "Resolved", "Closed"];
 
 type TicketDetailProps = {
   ticket: AdminTicket;
+  messagePagination: PaginationMeta;
   updateAction: (formData: FormData) => Promise<void>;
   noteAction: (formData: FormData) => Promise<void>;
   replyAction: (formData: FormData) => Promise<void>;
@@ -43,7 +46,7 @@ type TicketDetailProps = {
   >;
 };
 
-export function TicketDetail({ ticket, updateAction, noteAction, replyAction, regenerateAction }: TicketDetailProps) {
+export function TicketDetail({ ticket, messagePagination, updateAction, noteAction, replyAction, regenerateAction }: TicketDetailProps) {
   const [status, setStatus] = useState(ticket.status);
   const [priority, setPriority] = useState<TicketPriority>(ticket.priority);
   const [category, setCategory] = useState<TicketCategory>(ticket.category);
@@ -94,7 +97,9 @@ export function TicketDetail({ ticket, updateAction, noteAction, replyAction, re
     formData.set("body", body);
     startTransition(async () => {
       await replyAction(formData);
-      setMessages((current) => [...current, { id: `new-message-${current.length + 1}`, sender: "admin", senderName: "BookLeaf Support", body, createdAt: "Just now" }]);
+      if (messagePagination.page === 1) {
+        setMessages((current) => [...current.slice(-(messagePagination.pageSize - 1)), { id: `new-message-${current.length + 1}`, sender: "admin", senderName: "BookLeaf Support", body, createdAt: "Just now" }]);
+      }
       setStatus("In Progress");
       flash("Response sent and saved");
     });
@@ -157,10 +162,12 @@ export function TicketDetail({ ticket, updateAction, noteAction, replyAction, re
                 <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-full bg-[#dff1f5] text-xs font-bold text-[#176786]">{ticket.author.name.split(" ").map((part) => part[0]).join("")}</span><div><p className="text-sm font-bold text-[#29434f]">{ticket.author.name}</p><p className="text-[11px] text-[#8a9da5]">Original query · {ticket.createdAt}</p></div></div></div>
                 <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-[#4d6570]">{ticket.description}</p>
               </article>
-              {messages.filter((message) => message.sender === "admin").map((message) => (
-                <article key={message.id} className="ml-auto max-w-[92%] rounded-2xl border border-[#cfe7ed] bg-[#edf8fa] p-4 sm:p-5"><div className="flex items-center gap-2 text-xs font-bold text-[#176786]"><ShieldCheck className="size-4" />{message.senderName} · {message.createdAt}</div><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#36535f]">{message.body}</p></article>
-              ))}
+              {messages.map((message) => {
+                const admin = message.sender === "admin";
+                return <article key={message.id} className={`max-w-[92%] rounded-2xl border p-4 sm:p-5 ${admin ? "ml-auto border-[#cfe7ed] bg-[#edf8fa]" : "border-[#e0e7e9] bg-[#f7f9fa]"}`}><div className={`flex items-center gap-2 text-xs font-bold ${admin ? "text-[#176786]" : "text-[#5f7680]"}`}>{admin ? <ShieldCheck className="size-4" /> : null}{message.senderName} · {message.createdAt}</div><p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#36535f]">{message.body}</p></article>;
+              })}
             </div>
+            <Pagination meta={messagePagination} basePath={`/admin/tickets/${ticket.id}`} pageParam="messagesPage" itemLabel="messages" />
           </section>
 
           <section className="overflow-hidden rounded-2xl border border-[#dfe7ea] bg-white shadow-[0_8px_30px_rgba(24,57,70,0.04)]">

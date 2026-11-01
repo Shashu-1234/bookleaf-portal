@@ -9,6 +9,7 @@ import type {
   AdminTicketQueueItem,
 } from "@/features/admin/types";
 import { ticketCategorySchema, ticketPrioritySchema } from "@/lib/ai/schemas";
+import { MESSAGES_PAGE_SIZE, pageRange, paginationMeta, TICKETS_PAGE_SIZE } from "@/lib/pagination";
 
 import { requireRole } from "./auth";
 import { DatabaseOperationError } from "./errors";
@@ -72,9 +73,22 @@ export const getAdminOverviewData = cache(async (): Promise<AdminOverviewTicket[
   });
 });
 
-export const getAdminTicketQueue = cache(async (): Promise<AdminTicketQueueItem[]> => {
-  const { supabase } = await requireRole(["admin", "ops"]);
-  const { data, error } = await supabase
+const ticketStatusSchema = z.enum(["Open", "In Progress", "Resolved", "Closed"]);
+const adminQueueInputSchema = z.object({
+  page: z.number().int().positive().max(10_000).catch(1),
+  search: z.string().trim().max(100).catch(""),
+  status: ticketStatusSchema.optional().catch(undefined),
+  category: ticketCategorySchema.optional().catch(undefined),
+  priority: ticketPrioritySchema.optional().catch(undefined),
+  age: z.enum(["24h", "3d", "7d"]).optional().catch(undefined),
+  assignment: z.enum(["Mine", "Unassigned"]).optional().catch(undefined),
+});
+
+export const getAdminTicketQueue = cache(async (input: unknown) => {
+  const filters = adminQueueInputSchema.parse(input);
+  const { supabase, claims } = await requireRole(["admin", "ops"]);
+  const { from, to } = pageRange(filters.page, TICKETS_PAGE_SIZE);
+  let query = supabase
     .from("tickets")
     .select(`
       ticket_number, subject, description, category, priority, status, created_at,
@@ -82,8 +96,34 @@ export const getAdminTicketQueue = cache(async (): Promise<AdminTicketQueueItem[
       books(title, isbn),
       staff_profiles(display_name),
       ai_runs(state, created_at)
-    `)
-    .order("created_at", { ascending: true });
+    `, { count: "exact" });
+
+  if (filters.status) query = query.eq("status", filters.status);
+  if (filters.category) query = query.eq("category", filters.category);
+  if (filters.priority) query = query.eq("priority", filters.priority);
+  if (filters.assignment === "Mine") query = query.eq("assigned_to", claims.sub);
+  if (filters.assignment === "Unassigned") query = query.is("assigned_to", null);
+  if (filters.age) {
+    const hours = filters.age === "24h" ? 24 : filters.age === "3d" ? 72 : 168;
+    query = query.gte("created_at", new Date(Date.now() - hours * 3_600_000).toISOString());
+  }
+  if (filters.search) {
+    const ticketMatch = /^BL-(\d+)$/i.exec(filters.search);
+    if (ticketMatch) query = query.eq("ticket_number", Number(ticketMatch[1]));
+    else {
+      const safeSearch = filters.search.replace(/[%_,()]/g, " ").trim();
+      if (safeSearch) query = query.or(`subject.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%`);
+    }
+  }
+
+  const { data, error, count } = await query
+    .order("status", { ascending: true })
+    .order("priority", { ascending: true })
+    .order("created_at", { ascending: true })
+    .order("ticket_number", { ascending: true })
+    .order("created_at", { referencedTable: "ai_runs", ascending: false })
+    .limit(1, { referencedTable: "ai_runs" })
+    .range(from, to);
 
   if (error) {
     throw new DatabaseOperationError(
@@ -93,7 +133,7 @@ export const getAdminTicketQueue = cache(async (): Promise<AdminTicketQueueItem[
     );
   }
 
-  return data.map((ticket) => {
+  const tickets: AdminTicketQueueItem[] = data.map((ticket) => {
     const latestAiRun = ticket.ai_runs.toSorted((a, b) =>
       b.created_at.localeCompare(a.created_at),
     )[0];
@@ -111,6 +151,7 @@ export const getAdminTicketQueue = cache(async (): Promise<AdminTicketQueueItem[
       ai: { state: latestAiRun?.state === "ready" ? "ready" : "manual_review" },
     };
   });
+  return { tickets, filters, pagination: paginationMeta(filters.page, TICKETS_PAGE_SIZE, count) };
 });
 
 export const getCurrentStaffProfile = cache(async () => {
@@ -132,7 +173,7 @@ export const getCurrentStaffProfile = cache(async () => {
   return data;
 });
 
-export const getAdminTicketByCode = cache(async (code: string): Promise<AdminTicket | null> => {
+export const getAdminTicketByCode = cache(async (code: string, messagePage = 1) => {
   const ticketNumber = ticketNumberFromCode(code);
   const { supabase } = await requireRole(["admin", "ops"]);
   const { data, error } = await supabase
@@ -147,7 +188,6 @@ export const getAdminTicketByCode = cache(async (code: string): Promise<AdminTic
         urgency_signals, draft_subject, draft_body, policy_references, provider,
         model, input_tokens, output_tokens, latency_ms, error_code, created_at
       ),
-      ticket_messages(id, sender, sender_name, body, created_at),
       internal_notes(id, body, created_at)
     `)
     .eq("ticket_number", ticketNumber)
@@ -162,13 +202,25 @@ export const getAdminTicketByCode = cache(async (code: string): Promise<AdminTic
   }
   if (!data) return null;
 
+  const { from, to } = pageRange(messagePage, MESSAGES_PAGE_SIZE);
+  const { data: messageRows, error: messageError, count: messageCount } = await supabase
+    .from("ticket_messages")
+    .select("id, sender, sender_name, body, created_at", { count: "exact" })
+    .eq("ticket_id", data.id)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(from, to);
+  if (messageError) {
+    throw new DatabaseOperationError("Unable to load the ticket conversation.", "ADMIN_MESSAGES_QUERY_FAILED", { cause: messageError });
+  }
+
   const aiRuns = data.ai_runs.toSorted((a, b) =>
     b.created_at.localeCompare(a.created_at),
   );
   const ai = aiRuns[0];
   const usableDraft = aiRuns.find((run) => run.draft_body);
 
-  return {
+  const ticket: AdminTicket = {
     id: `BL-${data.ticket_number}`,
     subject: data.subject,
     description: data.description,
@@ -217,8 +269,8 @@ export const getAdminTicketByCode = cache(async (code: string): Promise<AdminTic
           policyReferences: usableDraft.policy_references,
         }
       : null,
-    messages: data.ticket_messages
-      .toSorted((a, b) => a.created_at.localeCompare(b.created_at))
+    messages: messageRows
+      .toReversed()
       .map((message) => ({
         id: message.id,
         sender: message.sender,
@@ -254,6 +306,7 @@ export const getAdminTicketByCode = cache(async (code: string): Promise<AdminTic
       })),
     ],
   };
+  return { ticket, messagePagination: paginationMeta(messagePage, MESSAGES_PAGE_SIZE, messageCount) };
 });
 
 export async function getAdminTicketDatabaseId(code: string) {
@@ -273,8 +326,6 @@ export async function getAdminTicketDatabaseId(code: string) {
   }
   return data.id;
 }
-
-const ticketStatusSchema = z.enum(["Open", "In Progress", "Resolved", "Closed"]);
 
 export async function updateAdminTicket(ticketId: string, input: unknown) {
   const id = z.string().uuid().parse(ticketId);

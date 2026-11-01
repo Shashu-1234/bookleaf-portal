@@ -15,6 +15,7 @@ import type {
   AuthorSupportTicketSummary,
   RoyaltyPayout,
 } from "@/features/author/types";
+import { MESSAGES_PAGE_SIZE, pageRange, paginationMeta, TICKETS_PAGE_SIZE } from "@/lib/pagination";
 
 import { processNewTicketAi } from "./ai-repository";
 import { requireClaims } from "./auth";
@@ -210,42 +211,73 @@ export const getAuthorRoyalties = cache(async () => {
   return { books, payouts };
 });
 
-export const getAuthorSupportData = cache(async () => {
+const supportPageInputSchema = z.object({
+  page: z.number().int().positive().max(10_000).catch(1),
+  search: z.string().trim().max(100).catch(""),
+});
+
+export const getAuthorSupportData = cache(async (input: unknown) => {
+  const filters = supportPageInputSchema.parse(input);
   const { supabase, claims } = await requireClaims();
-  const { data, error } = await supabase
+  const { data: authorData, error: authorError } = await supabase
     .from("authors")
-    .select(`
-      books(id, title),
-      tickets(ticket_number, subject, category, status, updated_at, book_id, ticket_messages(id))
-    `)
+    .select("id, books(id, title)")
     .eq("user_id", claims.sub)
-    .order("updated_at", { referencedTable: "tickets", ascending: false })
     .maybeSingle();
 
-  if (error) {
+  if (authorError) {
     throw new DatabaseOperationError(
       "Unable to load support queries.",
       "AUTHOR_SUPPORT_QUERY_FAILED",
-      { cause: error },
+      { cause: authorError },
     );
   }
 
-  const workspace = requireAuthorWorkspace(data);
+  const workspace = requireAuthorWorkspace(authorData);
+  const { from, to } = pageRange(filters.page, TICKETS_PAGE_SIZE);
+  let ticketsQuery = supabase
+    .from("tickets")
+    .select("ticket_number, subject, category, status, updated_at, book_id, ticket_messages(count)", { count: "exact" })
+    .eq("author_id", workspace.id);
+  if (filters.search) {
+    const ticketMatch = /^BL-(\d+)$/i.exec(filters.search);
+    if (ticketMatch) ticketsQuery = ticketsQuery.eq("ticket_number", Number(ticketMatch[1]));
+    else {
+      const safeSearch = filters.search.replace(/[%_,()]/g, " ").trim();
+      if (safeSearch) ticketsQuery = ticketsQuery.ilike("subject", `%${safeSearch}%`);
+    }
+  }
+
+  const [ticketResult, openResult, resolvedResult] = await Promise.all([
+    ticketsQuery.order("updated_at", { ascending: false }).order("ticket_number", { ascending: false }).range(from, to),
+    supabase.from("tickets").select("id", { count: "exact", head: true }).eq("author_id", workspace.id).in("status", ["Open", "In Progress"]),
+    supabase.from("tickets").select("id", { count: "exact", head: true }).eq("author_id", workspace.id).in("status", ["Resolved", "Closed"]),
+  ]);
+  if (ticketResult.error || openResult.error || resolvedResult.error) {
+    throw new DatabaseOperationError("Unable to load support queries.", "AUTHOR_SUPPORT_QUERY_FAILED", { cause: ticketResult.error ?? openResult.error ?? resolvedResult.error });
+  }
+
   const books: AuthorBookOption[] = workspace.books.map((book) => ({
     id: book.id,
     title: book.title,
   }));
-  const tickets: AuthorSupportTicketSummary[] = workspace.tickets.map((ticket) => ({
+  const tickets: AuthorSupportTicketSummary[] = ticketResult.data.map((ticket) => ({
     id: `BL-${ticket.ticket_number}`,
     subject: ticket.subject,
     category: ticket.category,
     status: ticket.status,
     updatedAt: formatDateTime(ticket.updated_at),
     bookId: ticket.book_id,
-    messageCount: ticket.ticket_messages.length,
+    messageCount: ticket.ticket_messages[0]?.count ?? 0,
   }));
 
-  return { books, tickets };
+  return {
+    books,
+    tickets,
+    search: filters.search,
+    stats: { open: openResult.count ?? 0, resolved: resolvedResult.count ?? 0 },
+    pagination: paginationMeta(filters.page, TICKETS_PAGE_SIZE, ticketResult.count),
+  };
 });
 
 export const getAuthorBookOptions = cache(async (): Promise<AuthorBookOption[]> => {
@@ -270,7 +302,7 @@ export const getAuthorBookOptions = cache(async (): Promise<AuthorBookOption[]> 
   }));
 });
 
-export async function getAuthorTicketByCode(code: string) {
+export async function getAuthorTicketByCode(code: string, messagePage = 1) {
   const ticketNumber = z
     .string()
     .regex(/^BL-\d+$/)
@@ -280,13 +312,11 @@ export async function getAuthorTicketByCode(code: string) {
   const { data, error } = await supabase
     .from("tickets")
     .select(`
-      ticket_number, subject, description, category, status, created_at, updated_at, book_id,
+      id, ticket_number, subject, description, category, status, created_at, updated_at, book_id,
       authors(name),
-      books(id, title),
-      ticket_messages(id, sender, sender_name, body, created_at)
+      books(id, title)
     `)
     .eq("ticket_number", ticketNumber)
-    .order("created_at", { referencedTable: "ticket_messages", ascending: true })
     .maybeSingle();
 
   if (error) {
@@ -298,6 +328,18 @@ export async function getAuthorTicketByCode(code: string) {
   }
   if (!data) return null;
 
+  const { from, to } = pageRange(messagePage, MESSAGES_PAGE_SIZE);
+  const { data: messageRows, error: messageError, count: messageCount } = await supabase
+    .from("ticket_messages")
+    .select("id, sender, sender_name, body, created_at", { count: "exact" })
+    .eq("ticket_id", data.id)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(from, to);
+  if (messageError) {
+    throw new DatabaseOperationError("Unable to load the ticket conversation.", "AUTHOR_MESSAGES_QUERY_FAILED", { cause: messageError });
+  }
+
   const ticket: AuthorSupportTicket = {
     id: `BL-${data.ticket_number}`,
     subject: data.subject,
@@ -307,7 +349,7 @@ export async function getAuthorTicketByCode(code: string) {
     createdAt: formatDateTime(data.created_at),
     updatedAt: formatDateTime(data.updated_at),
     bookId: data.book_id,
-    messages: data.ticket_messages.map((message) => ({
+    messages: messageRows.toReversed().map((message) => ({
       id: message.id,
       sender: message.sender === "admin" ? "support" : "author",
       senderName: message.sender_name,
@@ -320,6 +362,7 @@ export async function getAuthorTicketByCode(code: string) {
     ticket,
     book: data.books ? { id: data.books.id, title: data.books.title } : null,
     author: { name: data.authors.name, initials: initials(data.authors.name) },
+    messagePagination: paginationMeta(messagePage, MESSAGES_PAGE_SIZE, messageCount),
   };
 }
 
