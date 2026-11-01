@@ -14,7 +14,7 @@ The seed preserves the supplied ten authors and eighteen books, including both p
 
 The ticket is saved before AI work starts. A provider-neutral service supports Gemini, local Ollama and manual review. Classification returns a category, priority, confidence and rationale; drafting uses relevant BookLeaf policy and trusted author/book context. Output schemas, token limits, timeouts and bounded retries constrain provider behavior. Untrusted ticket content is separated from policy instructions. Drafts require an administrator's review and send action. AI audit records capture provider/model, usage, timing and safe failure information; regeneration preserves a previous usable draft if the new attempt fails.
 
-Manual mode is the repository default and incurs no model calls. The workflow is connected in application code, but deployment configuration and successful live provider execution require separate verification. A working manual response must not be presented as proof that Gemini ran. No fresh provider request was made during this documentation update.
+Manual mode is the repository default and incurs no model calls. The hosted audit log contains a successful Gemini classification and draft with token usage recorded; seeded demo entries are not counted as provider evidence. This verifies one execution, not classification accuracy across all categories or future provider availability.
 
 ## Trade-offs, validation and production evolution
 

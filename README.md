@@ -315,7 +315,7 @@ The [one-page approach](docs/approach.md) summarises priorities, trade-offs and 
 
 ## Submission documentation
 
-- [One-page approach and production evolution](docs/approach.md)
+- [One-page approach and production evolution (PDF)](docs/bookleaf-approach.pdf) · [Markdown source](docs/approach.md)
 - [Known limitations and assumptions](docs/limitations.md)
 - [REST API contracts and examples](docs/api.md)
 - [AI architecture, configuration and reliability](docs/ai-architecture.md)
