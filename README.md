@@ -251,6 +251,10 @@ For release review, also exercise public response delivery, note privacy, role c
 - `/login` — role-aware email/password sign-in
 - `/admin/tickets` — support queue
 - `/admin/tickets/[ticketId]` — ticket workspace
+- `/admin/assigned` — tickets assigned to the signed-in staff account
+- `/admin/review` — unresolved tickets whose latest AI attempt needs manual review, or has not run
+- `/admin/authors` — searchable publishing directory, book statuses and royalty totals with author-scoped ticket links
+- `/admin/ai-activity` — paginated AI audit records, model/token/latency metadata and safe failure codes
 - `/author` — author overview
 - `/author/books` — catalogue and distribution
 - `/author/royalties` — earnings and payouts
@@ -272,6 +276,8 @@ AI is disabled by default (`AI_PROVIDER=manual`), so local development and datab
 Deploy this repository as a Next.js project with the committed lockfile. Configure the environment variables in the hosting dashboard, including server-only secrets for AI processing. Add the deployed origin to Supabase Auth settings and keep application execution near the database. Recheck login, role routing, RLS, ticket creation, Realtime and provider configuration after deployment. Changing environment variables requires a new deployment to take effect.
 
 ## Known limitations and assumptions
+
+The Needs review view scans minimal unresolved-ticket/latest-run projections before filtering and paginating full tickets. This keeps the current small dataset simple; at production scale, move latest-run filtering/counting into an indexed database query to avoid growing candidate scans and ID filters. These admin pages are read-only until a staff member explicitly opens a ticket and performs an existing action; opening AI activity does not request model inference.
 
 - Hosted AI success requires separate verification; enabled workflow code does not prove provider availability or quality.
 - Initial AI work uses Next.js post-response execution, not a durable queue; interrupted jobs need a production recovery mechanism.

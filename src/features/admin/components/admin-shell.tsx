@@ -6,6 +6,10 @@ import {
   Search,
   LogOut,
   TicketCheck,
+  Users,
+  UserCheck,
+  ClipboardCheck,
+  Activity,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -15,6 +19,10 @@ import { useState } from "react";
 const navigation = [
   { label: "Overview", href: "/admin", icon: LayoutDashboard },
   { label: "Ticket queue", href: "/admin/tickets", icon: TicketCheck },
+  { label: "My assigned tickets", href: "/admin/assigned", icon: UserCheck },
+  { label: "Needs review", href: "/admin/review", icon: ClipboardCheck },
+  { label: "Authors", href: "/admin/authors", icon: Users },
+  { label: "AI activity", href: "/admin/ai-activity", icon: Activity },
 ];
 
 export function AdminShell({ children, admin }: { children: React.ReactNode; admin: { name: string; role: string; initials: string } }) {

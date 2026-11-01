@@ -82,12 +82,30 @@ const adminQueueInputSchema = z.object({
   priority: ticketPrioritySchema.optional().catch(undefined),
   age: z.enum(["24h", "3d", "7d"]).optional().catch(undefined),
   assignment: z.enum(["Mine", "Unassigned"]).optional().catch(undefined),
+  author: z.string().regex(/^AUTH\d{3,}$/).optional().catch(undefined),
+  review: z.boolean().default(false),
 });
 
 export const getAdminTicketQueue = cache(async (input: unknown) => {
   const filters = adminQueueInputSchema.parse(input);
   const { supabase, claims } = await requireRole(["admin", "ops"]);
   const { from, to } = pageRange(filters.page, TICKETS_PAGE_SIZE);
+  // Check the latest run, not any historical failure. Only minimal triage
+  // projections are loaded; the full queue remains paginated below.
+  const reviewIds: string[] = [];
+  if (filters.review) {
+    for (let offset = 0; ; offset += 500) {
+      const { data: candidates, error } = await supabase.from("tickets")
+        .select("id, ai_runs(state, created_at)")
+        .in("status", ["Open", "In Progress"])
+        .order("id")
+        .order("created_at", { referencedTable: "ai_runs", ascending: false })
+        .limit(1, { referencedTable: "ai_runs" }).range(offset, offset + 499);
+      if (error) throw new DatabaseOperationError("Unable to load review candidates.", "REVIEW_QUERY_FAILED", { cause: error });
+      for (const candidate of candidates) if (candidate.ai_runs[0]?.state !== "ready") reviewIds.push(candidate.id);
+      if (candidates.length < 500) break;
+    }
+  }
   let query = supabase
     .from("tickets")
     .select(`
@@ -99,6 +117,8 @@ export const getAdminTicketQueue = cache(async (input: unknown) => {
     `, { count: "exact" });
 
   if (filters.status) query = query.eq("status", filters.status);
+  if (filters.author) query = query.eq("author_id", filters.author);
+  if (filters.review) query = query.in("id", reviewIds.length ? reviewIds : ["00000000-0000-0000-0000-000000000000"]);
   if (filters.category) query = query.eq("category", filters.category);
   if (filters.priority) query = query.eq("priority", filters.priority);
   if (filters.assignment === "Mine") query = query.eq("assigned_to", claims.sub);
