@@ -7,15 +7,19 @@ import { getCurrentStaffProfile } from "@/lib/database/admin-repository";
 export const metadata: Metadata = { title: "Admin" };
 export const instant = false;
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<AdminShellFallback />}>
+      <AdminShellWithProfile>{children}</AdminShellWithProfile>
+    </Suspense>
+  );
+}
+
+async function AdminShellWithProfile({ children }: { children: React.ReactNode }) {
   const staff = await getCurrentStaffProfile();
   const name = staff?.display_name ?? "BookLeaf Support";
   const admin = { name, role: "Support Operations", initials: name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase() };
-  return (
-    <Suspense fallback={<AdminShellFallback />}>
-      <AdminShell admin={admin}>{children}</AdminShell>
-    </Suspense>
-  );
+  return <AdminShell admin={admin}>{children}</AdminShell>;
 }
 
 function AdminShellFallback() {

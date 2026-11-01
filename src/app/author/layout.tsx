@@ -8,14 +8,18 @@ import { getAuthorShellProfile } from "@/lib/database/author-repository";
 export const metadata: Metadata = { title: "Author Portal" };
 export const instant = false;
 
-export default async function AuthorLayout({ children }: { children: React.ReactNode }) {
-  await requireRole(["author"]);
-  const author = await getAuthorShellProfile();
+export default function AuthorLayout({ children }: { children: React.ReactNode }) {
   return (
     <Suspense fallback={<AuthorShellFallback />}>
-      <AuthorShell author={author}>{children}</AuthorShell>
+      <AuthorShellWithProfile>{children}</AuthorShellWithProfile>
     </Suspense>
   );
+}
+
+async function AuthorShellWithProfile({ children }: { children: React.ReactNode }) {
+  await requireRole(["author"]);
+  const author = await getAuthorShellProfile();
+  return <AuthorShell author={author}>{children}</AuthorShell>;
 }
 
 function AuthorShellFallback() {
