@@ -2,16 +2,35 @@
 
 import { ArrowLeft, BookOpen, CheckCircle2, Clock3, MessageSquareReply, Send } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { type FormEvent, useState, useTransition } from "react";
 
 import { Pagination } from "@/features/shared/components/pagination";
+import { apiFetch } from "@/lib/api/client";
 import type { PaginationMeta } from "@/lib/pagination";
 import type { AuthorBookOption, AuthorSupportTicket } from "../types";
 import { AuthorTicketStatus } from "./support-badges";
 
-export function SupportTicketDetail({ ticket, book, author, messagePagination, replyAction }: { ticket: AuthorSupportTicket; book: AuthorBookOption | null; author: { name: string; initials: string }; messagePagination: PaginationMeta; replyAction: (formData: FormData) => Promise<void> }) {
+export function SupportTicketDetail({ ticket, book, author, messagePagination }: { ticket: AuthorSupportTicket; book: AuthorBookOption | null; author: { name: string; initials: string }; messagePagination: PaginationMeta }) {
+  const router = useRouter();
   const [reply, setReply] = useState("");
+  const [error, setError] = useState("");
+  const [pending, startTransition] = useTransition();
   const closed = ticket.status === "Closed";
+  const submitReply = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    startTransition(async () => {
+      try {
+        await apiFetch(`/api/v1/tickets/${ticket.id}/messages`, { method: "POST", body: JSON.stringify({ body: reply }) });
+        setReply("");
+        router.replace(`/author/support/${ticket.id}`);
+        router.refresh();
+      } catch (requestError) {
+        setError(requestError instanceof Error ? requestError.message : "Unable to send the reply.");
+      }
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -24,7 +43,7 @@ export function SupportTicketDetail({ ticket, book, author, messagePagination, r
             {ticket.messages.map((message) => { const support = message.sender === "support"; return <div key={message.id} className={`flex gap-3 ${support ? "" : "justify-end"}`}>{support ? <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#123346] text-[10px] font-bold text-white">BL</span> : null}<div className={`max-w-2xl rounded-2xl px-4 py-3 ${support ? "rounded-tl-md bg-[#f1f6f7] text-[#29434f]" : "rounded-tr-md bg-[#176786] text-white"}`}><div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1"><p className={`text-xs font-bold ${support ? "text-[#176786]" : "text-sky-100"}`}>{message.senderName}</p><span className={`text-[10px] ${support ? "text-[#8a9da5]" : "text-sky-100/70"}`}>{message.createdAt}</span></div><p className="whitespace-pre-wrap text-sm leading-6">{message.body}</p></div>{support ? null : <span title={author.name} className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#dff1f5] text-[10px] font-bold text-[#176786]">{author.initials}</span>}</div>; })}
           </div>
           <Pagination meta={messagePagination} basePath={`/author/support/${ticket.id}`} pageParam="messagesPage" itemLabel="messages" />
-          {!closed ? <form action={replyAction} className="border-t border-[#e7edef] bg-[#fbfcfc] p-5 sm:p-6"><label className="text-sm font-semibold text-[#29434f]" htmlFor="ticket-reply">Add a reply</label><textarea name="body" id="ticket-reply" required minLength={1} maxLength={4000} value={reply} onChange={(event) => setReply(event.target.value)} rows={4} placeholder="Continue the conversation…" className="mt-2 w-full resize-y rounded-xl border border-[#cad7db] bg-white p-3 text-sm leading-6 outline-none transition placeholder:text-[#a2b0b6] focus:border-[#73aabc]" /><div className="mt-3 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"><p className="text-[11px] text-[#8a9da5]">Your reply is saved securely to this conversation.</p><button type="submit" className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#176786] px-4 text-sm font-semibold text-white hover:bg-[#125a76]"><Send className="size-4" />Send reply</button></div></form> : null}
+          {!closed ? <form onSubmit={submitReply} className="border-t border-[#e7edef] bg-[#fbfcfc] p-5 sm:p-6"><label className="text-sm font-semibold text-[#29434f]" htmlFor="ticket-reply">Add a reply</label><textarea name="body" id="ticket-reply" required minLength={1} maxLength={4000} value={reply} onChange={(event) => setReply(event.target.value)} rows={4} placeholder="Continue the conversation…" className="mt-2 w-full resize-y rounded-xl border border-[#cad7db] bg-white p-3 text-sm leading-6 outline-none transition placeholder:text-[#a2b0b6] focus:border-[#73aabc]" />{error ? <p role="alert" className="mt-2 text-xs text-red-700">{error}</p> : null}<div className="mt-3 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"><p className="text-[11px] text-[#8a9da5]">Your reply is saved securely to this conversation.</p><button type="submit" disabled={pending} className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#176786] px-4 text-sm font-semibold text-white hover:bg-[#125a76] disabled:opacity-60"><Send className="size-4" />{pending ? "Sending…" : "Send reply"}</button></div></form> : null}
         </section>
         <aside className="space-y-5">
           <section className="rounded-2xl border border-[#dfe7ea] bg-white p-5"><h2 className="font-bold text-[#172b36]">Query details</h2><dl className="mt-4 space-y-4 text-sm"><div><dt className="text-xs text-[#78909b]">Category</dt><dd className="mt-1 font-semibold text-[#29434f]">{ticket.category}</dd></div><div><dt className="text-xs text-[#78909b]">Related book</dt><dd className="mt-1 font-semibold text-[#29434f]">{book?.title ?? "General account query"}</dd></div><div><dt className="text-xs text-[#78909b]">Last updated</dt><dd className="mt-1 font-semibold text-[#29434f]">{ticket.updatedAt}</dd></div></dl></section>

@@ -12,6 +12,7 @@ Full-stack technical assignment for BookLeaf Publishing. The application contain
 - Responsive Next.js 16 application deployed on Vercel
 - Email/password authentication with verified server sessions and role-aware routing
 - Database-backed author queries, replies, admin overrides, assignments, notes and responses
+- Versioned REST API with bearer/cookie authentication, RBAC, Zod validation and consistent errors
 
 All portal reads and operational mutations are backed by Supabase. The remaining mock-data files are isolated fixtures for deterministic UI-model tests and are not imported by production routes.
 
@@ -90,6 +91,12 @@ npm audit
 - `/author/royalties` — earnings and payouts
 - `/author/support` — author support centre
 - `/author/support/new` — query submission
+
+## REST API
+
+The versioned API is rooted at `/api/v1`; its OpenAPI 3.1 document is served at [`/api/v1/openapi.json`](https://bookleaf-portal-wine.vercel.app/api/v1/openapi.json). See [API documentation](docs/api.md) for authentication, role permissions, endpoint contracts, pagination, response envelopes and curl examples.
+
+Browser mutations use the REST API through the existing secure session cookie. Postman and other external clients can use a Supabase access token with `Authorization: Bearer <token>`. The API middleware validates trusted `app_metadata` roles, while PostgreSQL RLS independently enforces row ownership.
 
 ## Deployment
 

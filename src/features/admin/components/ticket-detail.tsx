@@ -18,9 +18,11 @@ import {
   UserCheck,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Pagination } from "@/features/shared/components/pagination";
+import { apiFetch } from "@/lib/api/client";
 import type { PaginationMeta } from "@/lib/pagination";
 import {
   ticketCategories,
@@ -37,16 +39,10 @@ const statuses: TicketStatus[] = ["Open", "In Progress", "Resolved", "Closed"];
 type TicketDetailProps = {
   ticket: AdminTicket;
   messagePagination: PaginationMeta;
-  updateAction: (formData: FormData) => Promise<void>;
-  noteAction: (formData: FormData) => Promise<void>;
-  replyAction: (formData: FormData) => Promise<void>;
-  regenerateAction: () => Promise<
-    | { status: "completed"; draft: string; policyReferences: string[] }
-    | { status: "manual_review_required"; reason: string }
-  >;
 };
 
-export function TicketDetail({ ticket, messagePagination, updateAction, noteAction, replyAction, regenerateAction }: TicketDetailProps) {
+export function TicketDetail({ ticket, messagePagination }: TicketDetailProps) {
+  const router = useRouter();
   const [status, setStatus] = useState(ticket.status);
   const [priority, setPriority] = useState<TicketPriority>(ticket.priority);
   const [category, setCategory] = useState<TicketCategory>(ticket.category);
@@ -65,25 +61,29 @@ export function TicketDetail({ ticket, messagePagination, updateAction, noteActi
   };
 
   const mutate = (field: string, value: string, message: string) => {
-    const formData = new FormData();
-    formData.set("field", field);
-    formData.set("value", value);
     startTransition(async () => {
-      await updateAction(formData);
-      flash(message);
+      try {
+        await apiFetch(`/api/v1/tickets/${ticket.id}`, { method: "PATCH", body: JSON.stringify(field === "assignedTo" ? { assignedTo: value } : { [field]: value }) });
+        router.refresh();
+        flash(message);
+      } catch (error) {
+        flash(error instanceof Error ? error.message : "Unable to save the change");
+      }
     });
   };
 
   const addNote = () => {
     const note = newNote.trim();
     if (!note) return;
-    const formData = new FormData();
-    formData.set("body", note);
     startTransition(async () => {
-      await noteAction(formData);
-      setNotes((current) => [...current, { id: `new-note-${current.length + 1}`, author: "BookLeaf Support", body: note, createdAt: "Just now" }]);
-      setNewNote("");
-      flash("Internal note saved");
+      try {
+        await apiFetch(`/api/v1/tickets/${ticket.id}/notes`, { method: "POST", body: JSON.stringify({ body: note }) });
+        setNotes((current) => [...current, { id: `new-note-${current.length + 1}`, author: "BookLeaf Support", body: note, createdAt: "Just now" }]);
+        setNewNote("");
+        flash("Internal note saved");
+      } catch (error) {
+        flash(error instanceof Error ? error.message : "Unable to save the note");
+      }
     });
   };
 
@@ -93,22 +93,28 @@ export function TicketDetail({ ticket, messagePagination, updateAction, noteActi
       flash("Write or generate a response before sending");
       return;
     }
-    const formData = new FormData();
-    formData.set("body", body);
     startTransition(async () => {
-      await replyAction(formData);
-      if (messagePagination.page === 1) {
-        setMessages((current) => [...current.slice(-(messagePagination.pageSize - 1)), { id: `new-message-${current.length + 1}`, sender: "admin", senderName: "BookLeaf Support", body, createdAt: "Just now" }]);
+      try {
+        await apiFetch(`/api/v1/tickets/${ticket.id}/messages`, { method: "POST", body: JSON.stringify({ body }) });
+        if (messagePagination.page === 1) {
+          setMessages((current) => [...current.slice(-(messagePagination.pageSize - 1)), { id: `new-message-${current.length + 1}`, sender: "admin", senderName: "BookLeaf Support", body, createdAt: "Just now" }]);
+        }
+        setStatus("In Progress");
+        router.refresh();
+        flash("Response sent and saved");
+      } catch (error) {
+        flash(error instanceof Error ? error.message : "Unable to send the response");
       }
-      setStatus("In Progress");
-      flash("Response sent and saved");
     });
   };
 
   const regenerateDraft = () => {
     startTransition(async () => {
       try {
-        const result = await regenerateAction();
+        const result = await apiFetch<
+          | { status: "completed"; draft: string; policyReferences: string[] }
+          | { status: "manual_review_required"; reason: string }
+        >(`/api/v1/tickets/${ticket.id}/ai-draft`, { method: "POST" });
         if (result.status === "completed") {
           setDraft(result.draft);
           setPolicyReferences(result.policyReferences);
@@ -116,6 +122,7 @@ export function TicketDetail({ ticket, messagePagination, updateAction, noteActi
         } else {
           flash(result.reason);
         }
+        router.refresh();
       } catch {
         flash("Draft generation failed safely. Continue with a manual response.");
       }
