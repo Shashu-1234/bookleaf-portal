@@ -1,15 +1,12 @@
 "use client";
 
 import {
-  Bell,
   BookOpen,
-  ChevronDown,
   CircleHelp,
   Headphones,
   LayoutDashboard,
   Menu,
   ReceiptIndianRupee,
-  ShieldCheck,
   X,
   LogOut,
 } from "lucide-react";
@@ -21,7 +18,7 @@ const navigation = [
   { label: "Dashboard", href: "/author", icon: LayoutDashboard },
   { label: "My books", href: "/author/books", icon: BookOpen },
   { label: "Royalties", href: "/author/royalties", icon: ReceiptIndianRupee },
-  { label: "Support", href: "/author/support", icon: Headphones, badge: "1" },
+  { label: "Support", href: "/author/support", icon: Headphones },
 ];
 
 export function AuthorShell({ children, author }: { children: React.ReactNode; author: { id: string; name: string; initials: string } }) {
@@ -55,7 +52,6 @@ export function AuthorShell({ children, author }: { children: React.ReactNode; a
             return (
               <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${active ? "bg-white text-[#123346] shadow-sm" : "text-sky-50/75 hover:bg-white/8 hover:text-white"}`}>
                 <Icon className="size-[18px]" /><span className="flex-1">{item.label}</span>
-                {item.badge ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${active ? "bg-[#dff1f5] text-[#176786]" : "bg-white/10 text-white"}`}>{item.badge}</span> : null}
               </Link>
             );
           })}
@@ -63,23 +59,17 @@ export function AuthorShell({ children, author }: { children: React.ReactNode; a
           <Link href="/author/support/new" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-sky-50/70 transition hover:bg-white/8 hover:text-white"><CircleHelp className="size-[18px]" />Raise a query</Link>
         </nav>
 
-        <div className="m-3 rounded-2xl border border-white/10 bg-white/[0.06] p-3.5">
-          <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-emerald-200"><ShieldCheck className="size-4" />Secure author workspace</div>
-          <p className="text-xs leading-5 text-sky-50/55">Authenticated session · Data protected by row-level security.</p>
-        </div>
       </aside>
 
       <div className="min-w-0">
         <header className="sticky top-0 z-20 flex h-[76px] items-center gap-3 border-b border-[#dfe7ea] bg-white/90 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
           <button aria-label="Open navigation" className="grid size-10 place-items-center rounded-xl border border-[#dfe7ea] bg-white text-[#29434f] lg:hidden" onClick={() => setMobileOpen(true)}><Menu className="size-5" /></button>
-          <div className="hidden md:block"><p className="text-sm font-semibold text-[#29434f]">Author workspace</p><p className="text-[11px] text-[#78909b]">Books, royalties and support in one place</p></div>
+          <p className="hidden text-sm font-semibold text-[#29434f] md:block">Author workspace</p>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <button aria-label="Notifications" className="relative grid size-10 place-items-center rounded-xl border border-[#dfe7ea] bg-white text-[#4d6570] hover:bg-[#f5f7f8]"><Bell className="size-[18px]" /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-red-500" /></button>
-            <button aria-label="Open author profile menu" className="flex items-center gap-2 rounded-xl p-1.5 text-left hover:bg-[#f5f7f8]">
+            <div className="flex items-center gap-2 p-1.5 text-left">
               <span className="grid size-9 place-items-center rounded-xl bg-[#176786] text-xs font-bold text-white">{author.initials}</span>
               <span className="hidden leading-tight xl:block"><span className="block text-sm font-semibold text-[#172b36]">{author.name}</span><span className="block text-[11px] text-[#78909b]">Author ID · {author.id}</span></span>
-              <ChevronDown className="hidden size-4 text-[#9aabb2] xl:block" />
-            </button>
+            </div>
             <form action="/auth/signout" method="post"><button aria-label="Sign out" title="Sign out" className="grid size-10 place-items-center rounded-xl border border-[#dfe7ea] bg-white text-[#4d6570] hover:bg-[#f5f7f8]"><LogOut className="size-[18px]" /></button></form>
           </div>
         </header>

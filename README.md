@@ -276,7 +276,7 @@ Deploy this repository as a Next.js project with the committed lockfile. Configu
 - Hosted AI success requires separate verification; enabled workflow code does not prove provider availability or quality.
 - Initial AI work uses Next.js post-response execution, not a durable queue; interrupted jobs need a production recovery mechanism.
 - Publishing/sales/royalty values are synthetic seed data. There are no live marketplace, bank-transfer or production-tracking integrations, and no fabricated per-platform financial breakdown.
-- File attachments are UI-only, as permitted by the brief. The payout export button is disabled; downloadable statements are not implemented.
+- File attachments are UI-only, as permitted by the brief. Downloadable statements are not implemented.
 - Shared demo passwords are for evaluation only. Fresh databases need Auth users, trusted role claims and profile links provisioned separately.
 - Schema/prompt controls do not guarantee model correctness. Human approval remains required; a labelled AI benchmark, load tests and comprehensive browser end-to-end tests remain future work.
 - An empty payout history and zero earnings are valid data states. Pending balances are informational, not proof that a bank transfer has been scheduled.
