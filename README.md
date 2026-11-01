@@ -22,6 +22,20 @@ The priorities are grounded AI assistance, maintainable architecture, explicit a
 
 ## Current implementation
 
+### Dashboard previews
+
+Admin dashboard: support workload, priority queue and operations navigation.
+
+![BookLeaf admin dashboard showing the support workload and priority ticket queue](docs/screenshots/admin-dashboard.png)
+
+Author dashboard: Kavita's catalogue, royalty balances and support overview.
+
+![BookLeaf author dashboard showing Kavita's books, royalty balances and support overview](docs/screenshots/author-dashboard.png)
+
+These screenshots capture the synthetic demo at a point in time; live counts and statuses may change.
+
+### Features
+
 - Admin overview, ticket queue, filtering, assignment, internal notes, AI review and editable response drafts
 - Author dashboard, books, marketplace availability, royalties, support history and query submission flow
 - Provider-neutral AI architecture: Gemini, Ollama, or typed manual fallback
