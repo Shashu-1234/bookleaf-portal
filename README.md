@@ -114,3 +114,15 @@ Browser mutations use the REST API through the existing secure session cookie. P
 Production: <https://bookleaf-portal-wine.vercel.app>
 
 AI is disabled by default (`AI_PROVIDER=manual`), so local development and database work cannot incur provider usage accidentally.
+
+## Submission documentation
+
+- [One-page approach and production evolution](docs/approach.md)
+- [Known limitations and assumptions](docs/limitations.md)
+- [REST API contracts and examples](docs/api.md)
+- [AI architecture, configuration and reliability](docs/ai-architecture.md)
+- [Database architecture and ownership](docs/database-architecture.md)
+
+The AI workflow is connected in application code. The default manual configuration is distinct from verified hosted provider execution; no successful live AI run is asserted by this README. See the limitations for the evidence boundary.
+
+Repository: <https://github.com/Shashu-1234/bookleaf-portal>. BookLeaf supplied `musavir@bookleafpub.in` for collaborator access if the repository stays private; invitation acceptance must be confirmed before handover.

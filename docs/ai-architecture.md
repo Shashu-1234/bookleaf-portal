@@ -37,6 +37,8 @@ Audit records include provider, model, input/output token counts, combined laten
 
 ## Configuration
 
+Implementation and deployment evidence are separate: the application calls this workflow, but the checked-in default is manual mode. Successful production provider execution has not been verified as part of this documentation update. Confirm deployed configuration and inspect a successful `ai_runs` record before claiming a live model demonstration.
+
 Copy `.env.example` to an ignored `.env.local` and choose one provider:
 
 - `AI_PROVIDER=manual`: no AI calls; the complete admin workflow remains available.
