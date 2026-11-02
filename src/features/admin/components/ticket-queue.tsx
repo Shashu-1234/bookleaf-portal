@@ -2,6 +2,8 @@
 
 import { ChevronRight, Filter, Search, SlidersHorizontal, UserRoundX, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { type FormEvent, useTransition } from "react";
 
 import { Pagination } from "@/features/shared/components/pagination";
 import { ticketCategories, ticketPriorities, type TicketCategory, type TicketPriority } from "@/lib/ai/schemas";
@@ -24,6 +26,16 @@ type QueueFilters = {
 };
 
 export function TicketQueue({ tickets, filters, pagination, basePath = "/admin/tickets", title = "Ticket queue", description = "Review, prioritize, assign, and resolve author queries. Newest tickets appear first. Use the sort control to prioritize urgent and older work.", assignedOnly = false }: { tickets: AdminTicketQueueItem[]; filters: QueueFilters; pagination: PaginationMeta; basePath?: string; title?: string; description?: string; assignedOnly?: boolean }) {
+  const router = useRouter();
+  const [updating, startTransition] = useTransition();
+  const applyFilters = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = new URLSearchParams();
+    for (const [key, value] of new FormData(event.currentTarget)) {
+      if (typeof value === "string" && value.trim()) query.set(key, value.trim());
+    }
+    startTransition(() => router.push(`${basePath}${query.size ? `?${query}` : ""}`, { scroll: false }));
+  };
   const hasFilters = Boolean(filters.search || filters.status || filters.category || filters.priority || filters.age || (!assignedOnly && filters.assignment) || filters.author || filters.sort === "priority");
   const paginationQuery = { q: filters.search || undefined, status: filters.status, category: filters.category, priority: filters.priority, age: filters.age, assignment: filters.assignment, author: filters.author, sort: filters.sort };
 
@@ -33,7 +45,7 @@ export function TicketQueue({ tickets, filters, pagination, basePath = "/admin/t
         <div><p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-[#176786]">Support operations</p><h1 className="text-2xl font-bold tracking-[-0.03em] text-[#172b36] sm:text-3xl">{title}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[#687f89]">{description}</p></div>
       </div>
 
-      <form method="get" className="rounded-2xl border border-[#dfe7ea] bg-white p-4 shadow-[0_8px_30px_rgba(24,57,70,0.04)] sm:p-5">
+      <form key={JSON.stringify(paginationQuery)} method="get" onSubmit={applyFilters} aria-busy={updating} className="rounded-2xl border border-[#dfe7ea] bg-white p-4 shadow-[0_8px_30px_rgba(24,57,70,0.04)] sm:p-5">
         {filters.author ? <input type="hidden" name="author" value={filters.author} /> : null}
         <div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-[#687f89]"><SlidersHorizontal className="size-4" />Filters</div><label className="flex items-center gap-2 text-xs text-[#687f89]">Sort by<select name="sort" defaultValue={filters.sort ?? "newest"} onChange={event => event.currentTarget.form?.requestSubmit()} className="h-9 rounded-lg border border-[#dfe7ea] bg-white px-3 text-sm text-[#425c67]"><option value="newest">Newest first</option><option value="priority">Priority / oldest first</option></select></label></div>
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(240px,1.4fr)_repeat(5,minmax(130px,.7fr))]">
