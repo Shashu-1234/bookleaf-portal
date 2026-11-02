@@ -20,11 +20,12 @@ type QueueFilters = {
   age?: "24h" | "3d" | "7d";
   assignment?: "Mine" | "Unassigned";
   author?: string;
+  sort?: "newest" | "priority";
 };
 
-export function TicketQueue({ tickets, filters, pagination, basePath = "/admin/tickets", title = "Ticket queue", description = "Review, prioritize, assign, and resolve author queries. Unresolved tickets are ordered by urgency and age.", assignedOnly = false }: { tickets: AdminTicketQueueItem[]; filters: QueueFilters; pagination: PaginationMeta; basePath?: string; title?: string; description?: string; assignedOnly?: boolean }) {
-  const hasFilters = Boolean(filters.search || filters.status || filters.category || filters.priority || filters.age || (!assignedOnly && filters.assignment) || filters.author);
-  const paginationQuery = { q: filters.search || undefined, status: filters.status, category: filters.category, priority: filters.priority, age: filters.age, assignment: filters.assignment, author: filters.author };
+export function TicketQueue({ tickets, filters, pagination, basePath = "/admin/tickets", title = "Ticket queue", description = "Review, prioritize, assign, and resolve author queries. Newest tickets appear first. Use the sort control to prioritize urgent and older work.", assignedOnly = false }: { tickets: AdminTicketQueueItem[]; filters: QueueFilters; pagination: PaginationMeta; basePath?: string; title?: string; description?: string; assignedOnly?: boolean }) {
+  const hasFilters = Boolean(filters.search || filters.status || filters.category || filters.priority || filters.age || (!assignedOnly && filters.assignment) || filters.author || filters.sort === "priority");
+  const paginationQuery = { q: filters.search || undefined, status: filters.status, category: filters.category, priority: filters.priority, age: filters.age, assignment: filters.assignment, author: filters.author, sort: filters.sort };
 
   return (
     <div className="space-y-6">
@@ -34,7 +35,7 @@ export function TicketQueue({ tickets, filters, pagination, basePath = "/admin/t
 
       <form method="get" className="rounded-2xl border border-[#dfe7ea] bg-white p-4 shadow-[0_8px_30px_rgba(24,57,70,0.04)] sm:p-5">
         {filters.author ? <input type="hidden" name="author" value={filters.author} /> : null}
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-[#687f89]"><SlidersHorizontal className="size-4" />Filters</div>
+        <div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-[#687f89]"><SlidersHorizontal className="size-4" />Filters</div><label className="flex items-center gap-2 text-xs text-[#687f89]">Sort by<select name="sort" defaultValue={filters.sort ?? "newest"} onChange={event => event.currentTarget.form?.requestSubmit()} className="h-9 rounded-lg border border-[#dfe7ea] bg-white px-3 text-sm text-[#425c67]"><option value="newest">Newest first</option><option value="priority">Priority / oldest first</option></select></label></div>
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(240px,1.4fr)_repeat(5,minmax(130px,.7fr))]">
           <label className="relative"><span className="sr-only">Search tickets</span><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#8a9da5]" /><input name="q" type="search" defaultValue={filters.search} placeholder="Search ticket, subject or description…" className="h-11 w-full rounded-xl border border-[#dfe7ea] bg-[#fbfcfc] pl-10 pr-16 text-sm outline-none focus:border-[#76aabd] focus:bg-white" /><button type="submit" className="absolute right-1.5 top-1/2 h-8 -translate-y-1/2 rounded-lg bg-[#176786] px-2.5 text-[11px] font-semibold text-white">Search</button></label>
           <FilterSelect label="Status" name="status" value={filters.status} options={statuses} />

@@ -20,5 +20,5 @@ export async function login(formData: FormData) {
 
   const { data } = await supabase.auth.getClaims();
   const role = (data?.claims?.app_metadata as { role?: string } | undefined)?.role;
-  redirect(role === "author" ? "/author" : "/admin");
+  redirect(role === "author" ? "/author" : role === "admin" || role === "ops" ? "/admin/tickets" : "/login?error=access");
 }

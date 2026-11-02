@@ -82,6 +82,7 @@ const adminQueueInputSchema = z.object({
   priority: ticketPrioritySchema.optional().catch(undefined),
   age: z.enum(["24h", "3d", "7d"]).optional().catch(undefined),
   assignment: z.enum(["Mine", "Unassigned"]).optional().catch(undefined),
+  sort: z.enum(["newest", "priority"]).catch("newest"),
   author: z.string().regex(/^AUTH\d{3,}$/).optional().catch(undefined),
   review: z.boolean().default(false),
 });
@@ -136,11 +137,10 @@ export const getAdminTicketQueue = cache(async (input: unknown) => {
     }
   }
 
+  query = filters.sort === "priority"
+    ? query.order("status", { ascending: true }).order("priority", { ascending: true }).order("created_at", { ascending: true }).order("ticket_number", { ascending: true })
+    : query.order("created_at", { ascending: false }).order("ticket_number", { ascending: false });
   const { data, error, count } = await query
-    .order("status", { ascending: true })
-    .order("priority", { ascending: true })
-    .order("created_at", { ascending: true })
-    .order("ticket_number", { ascending: true })
     .order("created_at", { referencedTable: "ai_runs", ascending: false })
     .limit(1, { referencedTable: "ai_runs" })
     .range(from, to);

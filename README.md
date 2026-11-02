@@ -269,6 +269,7 @@ For release review, also exercise public response delivery, note privacy, role c
 - `/admin` — operations overview
 - `/login` — role-aware email/password sign-in
 - `/admin/tickets` — support queue
+- Admin/ops sign-in and authenticated visits to `/` open the ticket queue. Queue views default to newest-first ordering; the Priority / oldest first option retains urgency-based review. Author sign-in continues to open the author portal.
 - `/admin/tickets/[ticketId]` — ticket workspace
 - `/admin/assigned` — tickets assigned to the signed-in staff account
 - `/admin/review` — unresolved tickets whose latest AI attempt needs manual review, or has not run

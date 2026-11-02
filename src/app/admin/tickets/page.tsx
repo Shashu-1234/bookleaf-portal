@@ -14,6 +14,7 @@ export default async function TicketQueuePage({ searchParams }: { searchParams: 
     page: parsePage(params.page), search: value("q"), status: value("status"), category: value("category"),
     priority: value("priority"), age: value("age"), assignment: value("assignment"),
     author: value("author"),
+    sort: value("sort"),
   });
   if (result.pagination.page > result.pagination.totalPages) {
     const next = new URLSearchParams();
