@@ -56,7 +56,7 @@ All portal reads and operational mutations are backed by Supabase. The remaining
 2. Submit a query for a specific book or General / Account Level, with a subject and description. The ticket is saved before AI processing.
 3. In another browser profile or private window, sign in as the administrator. Find the ticket in the queue; inspect category, priority, draft and AI review state. In manual mode, write a response directly.
 4. Override category/priority, assign the ticket to yourself, add an internal note, edit/send a public response, and change the status.
-5. Return to the author's ticket. Realtime subscriptions refresh ticket/conversation data without a manual reload. Verify that internal notes remain private.
+5. Return to the author's ticket. Realtime subscriptions refresh ticket/conversation data without a manual reload. A 15-second polling fallback runs on visible author dashboard/support pages when no refresh is pending; returning to the tab also refreshes. Verify that internal notes remain private.
 6. Use Sneha and Kavita to inspect both production titles, zero royalties and pending balances. Try an empty queue filter and paginated conversations.
 
 Use synthetic queries: this is a shared environment and tickets persist. File attachment selection is UI-only; uploads are not implemented. Model drafts require an explicit administrator send action.

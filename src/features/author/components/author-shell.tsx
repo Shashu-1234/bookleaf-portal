@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { SupportLiveUpdates } from "./support-live-updates";
 
 const navigation = [
   { label: "Dashboard", href: "/author", icon: LayoutDashboard },
@@ -27,6 +28,7 @@ export function AuthorShell({ children, author }: { children: React.ReactNode; a
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
+      <SupportLiveUpdates authorId={author.id} />
       {mobileOpen ? (
         <button
           aria-label="Close navigation overlay"
