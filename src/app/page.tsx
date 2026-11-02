@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+export const instant = false;
+
 export default async function Home() {
   await connection();
   const client = await createClient();
