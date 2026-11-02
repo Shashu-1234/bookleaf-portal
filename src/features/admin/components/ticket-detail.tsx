@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 import { Pagination } from "@/features/shared/components/pagination";
 import { apiFetch } from "@/lib/api/client";
@@ -33,6 +33,7 @@ import {
 import { formatAge, formatCurrency } from "../formatters";
 import type { AdminTicket, TicketStatus } from "../types";
 import { PriorityBadge, StatusBadge } from "./ticket-badges";
+import { aiDisplay } from "../ai-display";
 
 const statuses: TicketStatus[] = ["Open", "In Progress", "Resolved", "Closed"];
 
@@ -54,6 +55,24 @@ export function TicketDetail({ ticket, messagePagination }: TicketDetailProps) {
   const [newNote, setNewNote] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [edited, setEdited] = useState(false);
+  const [sourceDraft, setSourceDraft] = useState(ticket.draft?.body ?? "");
+  const incomingDraft = ticket.draft?.body ?? "";
+  if (incomingDraft !== sourceDraft) {
+    setSourceDraft(incomingDraft);
+    if (!edited) {
+      setDraft(incomingDraft);
+      setPolicyReferences(ticket.draft?.policyReferences ?? []);
+    }
+  }
+  const aiStatus = aiDisplay(ticket);
+  useEffect(() => {
+    if (!aiStatus.processing) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") router.refresh();
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [aiStatus.processing, router]);
 
   const flash = (message: string) => {
     setNotice(message);
@@ -116,6 +135,7 @@ export function TicketDetail({ ticket, messagePagination }: TicketDetailProps) {
           | { status: "manual_review_required"; reason: string }
         >(`/api/v1/tickets/${ticket.id}/ai-draft`, { method: "POST" });
         if (result.status === "completed") {
+          setEdited(false);
           setDraft(result.draft);
           setPolicyReferences(result.policyReferences);
           flash("New AI draft generated — review every fact before sending");
@@ -124,7 +144,7 @@ export function TicketDetail({ ticket, messagePagination }: TicketDetailProps) {
         }
         router.refresh();
       } catch {
-        flash("Draft generation failed safely. Continue with a manual response.");
+      flash("The draft request failed. Your ticket and previous draft are preserved; you can respond manually.");
       }
     });
   };
@@ -183,11 +203,11 @@ export function TicketDetail({ ticket, messagePagination }: TicketDetailProps) {
               {ticket.draft ? <span className="rounded-full border border-[#cfe7ed] bg-[#edf8fa] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#176786]">AI draft · Human approval required</span> : null}
             </div>
             <div className="p-5 sm:p-6">
-              {ticket.ai.state === "manual_review" ? (
-                <div className="mb-4 flex items-start gap-3 rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-800"><AlertCircle className="mt-0.5 size-4 shrink-0" /><div><p className="font-bold">AI assistance unavailable</p><p className="mt-1 leading-5 text-violet-700">The ticket remains fully actionable. Write a response manually or retry generation later.</p></div></div>
+              {!ticket.draft || ticket.ai.errorCode ? (
+                <div className="mb-4 flex items-start gap-3 rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-800"><AlertCircle className="mt-0.5 size-4 shrink-0" /><div><p className="font-bold">{aiStatus.title}</p><p className="mt-1 leading-5 text-violet-700">{aiStatus.detail}</p></div></div>
               ) : null}
               <label className="text-xs font-bold uppercase tracking-[0.12em] text-[#687f89]">Reply to {ticket.author.name}</label>
-              <textarea value={draft} onChange={(event) => setDraft(event.target.value)} rows={14} placeholder="Write a response or generate an AI draft…" className="scrollbar-thin mt-2 w-full resize-y rounded-xl border border-[#dfe7ea] bg-white p-4 text-sm leading-6 text-[#36535f] outline-none transition focus:border-[#76aabd]" />
+              <textarea value={draft} onChange={(event) => { setEdited(true); setDraft(event.target.value); }} rows={14} placeholder="Write a response or generate an AI draft…" className="scrollbar-thin mt-2 w-full resize-y rounded-xl border border-[#dfe7ea] bg-white p-4 text-sm leading-6 text-[#36535f] outline-none transition focus:border-[#76aabd]" />
               {policyReferences.length ? <div className="mt-3 flex flex-wrap gap-2"><span className="text-xs font-semibold text-[#78909b]">Grounded in:</span>{policyReferences.map((reference) => <span key={reference} className="rounded-full bg-[#f0f4f5] px-2.5 py-1 text-[10px] font-semibold text-[#58717c]">{reference}</span>)}</div> : null}
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs leading-5 text-[#78909b]">Edits remain private until you send the response.</p><div className="flex gap-3"><button disabled={pending} onClick={regenerateDraft} className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-[#cfe7ed] bg-[#edf8fa] px-4 text-sm font-semibold text-[#176786] disabled:opacity-60 sm:flex-none"><RefreshCw className={`size-4 ${pending ? "animate-spin" : ""}`} />Regenerate</button><button disabled={pending} onClick={sendResponse} className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-[#176786] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#125a76] disabled:opacity-60 sm:flex-none"><Send className="size-4" />Send response</button></div></div>
             </div>
@@ -196,12 +216,12 @@ export function TicketDetail({ ticket, messagePagination }: TicketDetailProps) {
 
         <aside className="space-y-5">
           <section className="overflow-hidden rounded-2xl border border-[#dfe7ea] bg-white shadow-[0_8px_30px_rgba(24,57,70,0.04)]">
-            <SectionHeader icon={Bot} title="AI triage" subtitle={ticket.ai.provider && ticket.ai.model ? `${ticket.ai.provider} · ${ticket.ai.model}` : "Manual review mode"} />
+            <SectionHeader icon={Bot} title="AI triage" subtitle={ticket.ai.provider && ticket.ai.model ? `${ticket.ai.provider} · ${ticket.ai.model}` : aiStatus.title} />
             <div className="space-y-4 p-5">
               {ticket.ai.state === "ready" ? (
                 <><div className="rounded-xl border border-[#cfe7ed] bg-[#f4fafb] p-4"><div className="flex items-center justify-between gap-3"><span className="text-xs font-bold uppercase tracking-wider text-[#176786]">Confidence</span><span className="text-lg font-bold text-[#176786]">{Math.round((ticket.ai.confidence ?? 0) * 100)}%</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#d9ebef]"><div className="h-full rounded-full bg-[#2b91ad]" style={{ width: `${(ticket.ai.confidence ?? 0) * 100}%` }} /></div></div><p className="text-sm leading-6 text-[#58717c]">{ticket.ai.rationale}</p></>
               ) : (
-                <div className="rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm leading-6 text-violet-800">Classification failed gracefully. The ticket was still created and can be handled manually.</div>
+                <div className="rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm leading-6 text-violet-800">{aiStatus.detail}</div>
               )}
               <ControlSelect label="Category override" value={category} onChange={(value) => { setCategory(value as TicketCategory); mutate("category", value, "Category override saved"); }} options={ticketCategories} />
               <ControlSelect label="Priority override" value={priority} onChange={(value) => { setPriority(value as TicketPriority); mutate("priority", value, "Priority override saved"); }} options={ticketPriorities} />

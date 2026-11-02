@@ -12,6 +12,7 @@ export interface AdminTicket {
   aiPriority: TicketPriority | null;
   status: TicketStatus;
   createdAt: string;
+  createdAtIso?: string;
   ageHours: number;
   updatedAt: string;
   assignedTo: string | null;
@@ -36,6 +37,7 @@ export interface AdminTicket {
     outputTokens: number | null;
     latencyMs: number | null;
     errorCode: string | null;
+    lastRunAt?: string | null;
   };
   draft: { subject: string; body: string; policyReferences: string[] } | null;
   messages: Array<{

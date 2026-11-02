@@ -250,6 +250,7 @@ export const getAdminTicketByCode = cache(async (code: string, messagePage = 1) 
     aiPriority: ai?.suggested_priority ?? null,
     status: data.status,
     createdAt: dateTimeFormatter.format(new Date(data.created_at)),
+    createdAtIso: data.created_at,
     ageHours: ageHours(data.created_at),
     updatedAt: dateTimeFormatter.format(new Date(data.updated_at)),
     assignedTo: data.staff_profiles?.display_name ?? null,
@@ -281,6 +282,7 @@ export const getAdminTicketByCode = cache(async (code: string, messagePage = 1) 
       outputTokens: ai?.output_tokens ?? null,
       latencyMs: ai?.latency_ms ?? null,
       errorCode: ai?.error_code ?? null,
+      lastRunAt: ai?.created_at ?? null,
     },
     draft: usableDraft?.draft_body
       ? {

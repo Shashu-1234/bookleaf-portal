@@ -37,7 +37,7 @@ Audit records include provider, model, input/output token counts, combined laten
 
 ## Configuration
 
-Implementation and deployment evidence are separate: the application calls this workflow, but the checked-in default is manual mode. Successful production provider execution has not been verified as part of this documentation update. Confirm deployed configuration and inspect a successful `ai_runs` record before claiming a live model demonstration.
+The checked-in default is manual mode. Hosted audit records confirm successful Gemini classification and drafting, including the BL-1050 handover test on 2 November 2026. Seeded records are excluded from this evidence. New tickets schedule both steps automatically after persistence; the admin detail page refreshes during initial processing and adopts the incoming draft only if the administrator has not edited the response. Regeneration is an explicit retry, not the initial trigger. These runs verify execution rather than benchmark accuracy or uninterrupted provider availability.
 
 Copy `.env.example` to an ignored `.env.local` and choose one provider:
 

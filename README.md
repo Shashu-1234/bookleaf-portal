@@ -243,7 +243,7 @@ Analysis output is capped at 700 tokens and drafts at 1,200. Draft calls receive
 
 Use synthetic data for this demonstration. Provider data-use terms depend on the selected tier. Real author data requires reviewed retention/privacy settings, an appropriate commercial arrangement or controlled self-hosting. Credentials remain in server environment variables.
 
-**Execution evidence:** code is connected, but the repository default is manual mode. The latest documentation review did not prove a successful hosted model call. Verify deployment configuration and an actual successful `ai_runs` record before claiming live AI execution. Manual fallback is not evidence of a model response.
+**Execution evidence:** the repository defaults to manual mode. The hosted audit contains genuine successful Gemini classification and drafting runs, including the handover test BL-1050 on 2 November 2026. Seeded demo records are not provider evidence. This confirms execution, not guaranteed answer accuracy or future provider availability. New ticket submission automatically schedules analysis and drafting; the admin detail page refreshes while processing and loads the result without replacing an edited response. A failed attempt remains available for manual handling or an explicit retry.
 
 ## Quality checks
 
@@ -321,6 +321,6 @@ The [one-page approach](docs/approach.md) summarises priorities, trade-offs and 
 - [AI architecture, configuration and reliability](docs/ai-architecture.md)
 - [Database architecture and ownership](docs/database-architecture.md)
 
-The AI workflow is connected in application code. The default manual configuration is distinct from verified hosted provider execution; no successful live AI run is asserted by this README. See the limitations for the evidence boundary.
+The hosted Gemini workflow has successful audited executions. Local manual mode remains the safe default; human review is required before sending any generated answer. See the limitations for the evidence boundary.
 
 Repository: <https://github.com/Shashu-1234/bookleaf-portal>. BookLeaf supplied `musavir@bookleafpub.in` for collaborator access if the repository stays private; invitation acceptance must be confirmed before handover.

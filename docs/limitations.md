@@ -1,6 +1,6 @@
 # Known limitations and assumptions
 
-- **Live AI evidence:** Classification, drafting, audit persistence and manual fallback are connected in code. The checked-in environment defaults to manual mode. This documentation update did not verify the deployed provider configuration or execute a live model request; do not claim a successful hosted AI run without checking an actual audit record.
+- **Live AI evidence:** Genuine hosted Gemini classification and drafting have been verified in audit records, including BL-1050 on 2 November 2026. The checked-in default remains manual mode. Successful runs do not constitute an accuracy benchmark or guarantee future provider availability. Old tickets created in manual mode retain their historical status until explicitly retried.
 - **Background execution:** Initial AI processing uses Next.js post-response work, rather than a durable job queue. Process termination can interrupt it; production requires persisted jobs, idempotency and recovery.
 - **Dataset:** Sales, royalties and payouts come from the synthetic assignment dataset. The portal does not reconcile real marketplace sales, initiate bank transfers or provide live production tracking.
 - **Demo authentication:** All ten authors and one administrator have shared synthetic test credentials documented for review. They are unsuitable for real customer accounts. A fresh local database seed does not recreate hosted Auth passwords; provision and link local identities separately.
