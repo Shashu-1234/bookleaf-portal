@@ -55,6 +55,16 @@ export function TicketDetail({ ticket, messagePagination }: TicketDetailProps) {
   const [newNote, setNewNote] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [sourceTicket, setSourceTicket] = useState(ticket);
+  if (ticket !== sourceTicket) {
+    setSourceTicket(ticket);
+    setMessages(ticket.messages);
+    setNotes(ticket.internalNotes);
+    setStatus(ticket.status);
+    setPriority(ticket.priority);
+    setCategory(ticket.category);
+    setAssignedTo(ticket.assignedTo);
+  }
   const [edited, setEdited] = useState(false);
   const [sourceDraft, setSourceDraft] = useState(ticket.draft?.body ?? "");
   const incomingDraft = ticket.draft?.body ?? "";

@@ -247,6 +247,8 @@ Use synthetic data for this demonstration. Provider data-use terms depend on the
 
 ## Quality checks
 
+Both portals subscribe to ticket/message changes. Visible admin pages also refresh automatically at a 10-second fallback interval, and author dashboard/support pages use a 15-second fallback. Returning to a tab refreshes it. Admin conversation/status state adopts server updates while edited response text is preserved. No automatic refresh triggers a model request. Separate browser profiles or devices are required when demonstrating author and admin sessions simultaneously; tabs in one browser profile share authentication cookies.
+
 ```bash
 npm run typecheck
 npm test

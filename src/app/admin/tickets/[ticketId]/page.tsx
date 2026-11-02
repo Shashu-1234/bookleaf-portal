@@ -17,5 +17,5 @@ export default async function TicketDetailPage({
   if (!detail) notFound();
   const { ticket, messagePagination } = detail;
   if (messagePagination.page > messagePagination.totalPages) redirect(`/admin/tickets/${ticketId}${messagePagination.totalPages > 1 ? `?messagesPage=${messagePagination.totalPages}` : ""}`);
-  return <TicketDetail ticket={ticket} messagePagination={messagePagination} />;
+  return <TicketDetail key={ticket.id} ticket={ticket} messagePagination={messagePagination} />;
 }

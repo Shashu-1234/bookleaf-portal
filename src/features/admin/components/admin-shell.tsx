@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { AdminLiveUpdates } from "./admin-live-updates";
 
 const navigation = [
   { label: "Overview", href: "/admin", icon: LayoutDashboard },
@@ -31,6 +32,7 @@ export function AdminShell({ children, admin }: { children: React.ReactNode; adm
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
+      <AdminLiveUpdates />
       {mobileOpen ? (
         <button
           aria-label="Close navigation overlay"
