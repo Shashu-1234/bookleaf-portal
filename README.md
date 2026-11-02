@@ -67,7 +67,7 @@ The hosted project uses synthetic assignment-only identities:
 | --- | --- | --- |
 | Support operations | `admin@bookleaf.example` | `BookLeaf!Admin2026` |
 | Author (Priya Sharma) | `priya@bookleaf.example` | `BookLeaf!Priya2026` |
-| Author (Rohit Kapoor) | `author@bookleaf.example` | `BookLeaf!Author2026` |
+| Author (Rohit Kapoor) | `rohit@bookleaf.example` | `BookLeaf!Rohit2026` |
 | Author (Ananya Reddy) | `ananya@bookleaf.example` | `BookLeaf!Ananya2026` |
 | Author (Vikram Joshi) | `vikram@bookleaf.example` | `BookLeaf!Vikram2026` |
 | Author (Meera Nair) | `meera@bookleaf.example` | `BookLeaf!Meera2026` |
@@ -76,8 +76,11 @@ The hosted project uses synthetic assignment-only identities:
 | Author (Farhan Sheikh) | `farhan@bookleaf.example` | `BookLeaf!Farhan2026` |
 | Author (Kavita Deshmukh — production title and pending payout) | `kavita@bookleaf.example` | `BookLeaf!Kavita2026` |
 | Author (Diya Chatterjee) | `diya@bookleaf.example` | `BookLeaf!Diya2026` |
+| Additional empty sample author (AUTH011) | `author@bookleaf.example` | `BookLeaf!Sample2026` |
 
 These credentials contain no real personal data and must be replaced before any production use.
+
+Rohit's login is now `rohit@bookleaf.example`; his account ID and linked publishing/support records are unchanged. The additional Sample Author (AUTH011) is a separate handover-testing identity, outside the original ten-author dataset, with no books or pre-created queries. The hosted database therefore has eleven author profiles and the original eighteen books. The committed publishing seed still contains exactly the original ten authors. The previous `author@bookleaf.example` password no longer works; this reused alias now belongs only to the empty sample identity.
 
 All ten supplied authors have isolated login accounts. The Sneha and Kavita accounts make the dataset's production, zero-royalty, no-payout and pending-payout edge cases directly reviewable through the author portal.
 
